@@ -1,0 +1,64 @@
+
+### `openapi.yaml` (root; minimal starter)
+```yaml
+openapi: 3.0.3
+info:
+  title: Routing Intelligence Platform API
+  version: 1.0.0
+servers:
+  - url: http://localhost:8080
+paths:
+  /health:
+    get:
+      summary: Health check
+      responses:
+        "200":
+          description: OK
+  /v1/route/plan:
+    post:
+      summary: Plan best route(s) for selected mode(s)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        "200":
+          description: Planned routes
+          content:
+            application/json:
+              schema:
+                type: object
+  /v1/route/monitor:
+    post:
+      summary: Continuous monitoring decision
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        "200":
+          description: Monitoring decision
+          content:
+            application/json:
+              schema:
+                type: object
+  /v1/trip/complete:
+    post:
+      summary: Post-trip ingestion for learning
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        "200":
+          description: Accepted
+          content:
+            application/json:
+              schema:
+                type: object
