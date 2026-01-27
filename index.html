@@ -3,74 +3,283 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Roadrage Demo</title>
+  <title>Roadrage — Route Planner Demo</title>
   <style>
-    body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;margin:24px;max-width:900px}
-    button{padding:10px 14px;font-size:14px;cursor:pointer}
-    pre{background:#111;color:#eee;padding:12px;border-radius:8px;overflow:auto}
-    .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
-    label{display:flex;gap:8px;align-items:center}
-    input{padding:6px 8px}
+    :root { color-scheme: light; }
+    body {
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+      margin: 28px;
+      line-height: 1.35;
+    }
+    h1 { margin: 0 0 10px; font-size: 34px; }
+    .sub { margin: 0 0 18px; color: #444; }
+    .row { display: flex; flex-wrap: wrap; gap: 14px 18px; align-items: end; margin: 14px 0 18px; }
+    label { display: grid; gap: 6px; font-size: 13px; color: #222; }
+    input, select, button {
+      font: inherit;
+      padding: 10px 12px;
+      border: 1px solid #bbb;
+      border-radius: 6px;
+      min-width: 160px;
+    }
+    button { cursor: pointer; min-width: 140px; }
+    button:disabled { cursor: not-allowed; opacity: 0.65; }
+    .meta {
+      display: grid;
+      gap: 6px;
+      margin: 4px 0 18px;
+      font-size: 13px;
+      color: #333;
+    }
+    .pill {
+      display: inline-block;
+      padding: 4px 8px;
+      border: 1px solid #ccc;
+      border-radius: 999px;
+      font-size: 12px;
+      background: #f7f7f7;
+      max-width: 100%;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      vertical-align: middle;
+    }
+    .hint { color: #666; }
+    .card {
+      border: 1px solid #ddd;
+      border-radius: 10px;
+      padding: 14px;
+      margin-top: 14px;
+    }
+    pre {
+      margin: 0;
+      padding: 14px;
+      border-radius: 10px;
+      background: #111;
+      color: #eee;
+      overflow: auto;
+      min-height: 70px;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+    .small { font-size: 12px; color: #555; }
+    .danger { color: #a00; font-weight: 650; }
+    .ok { color: #0a6; font-weight: 650; }
   </style>
 </head>
+
 <body>
   <h1>Roadrage — Route Planner Demo</h1>
-  <p>This page calls the local API at <code>http://localhost:8080/v1/route/plan</code>.</p>
+  <p class="sub">
+    This page calls the API endpoint <span class="pill" id="apiBasePill">…</span><span class="hint">/v1/route/plan</span>
+  </p>
 
-  <div class="row">
-    <label>Stress (1–100)
-      <input id="stress" type="number" min="1" max="100" value="25" />
-    </label>
-    <label>Trailer length (ft)
-      <input id="tlen" type="number" min="0" step="0.5" value="16" />
-    </label>
-    <label>Mode
-      <select id="mode">
-        <option value="TOW">TOW</option>
-        <option value="LOW_STRESS">LOW_STRESS</option>
-        <option value="FASTEST">FASTEST</option>
-        <option value="FUEL_SAVER">FUEL_SAVER</option>
-      </select>
-    </label>
-    <button id="plan">Plan route</button>
+  <div class="meta">
+    <div>
+      Resolution order:
+      <span class="pill">?api=</span>
+      → <span class="pill">localhost auto</span>
+      → <span class="pill">production default</span>
+    </div>
+    <div class="small">
+      Override example:
+      <span class="pill">?api=https://your-api.example.com</span>
+      or
+      <span class="pill">?api=http://192.168.1.50:8080</span>
+    </div>
   </div>
 
-  <h3>Response</h3>
-  <pre id="out">{}</pre>
+  <div class="row">
+    <label>
+      Stress (1–100)
+      <input id="stress" type="number" min="1" max="100" step="1" value="25" />
+    </label>
 
-  <script>
-    const $ = (id) => document.getElementById(id);
+    <label>
+      Trailer length (ft)
+      <input id="trailerLengthFt" type="number" min="0" max="80" step="0.5" value="16" />
+    </label>
 
-    $("plan").onclick = async () => {
-      const stress = Math.max(1, Math.min(100, Number($("stress").value || 25)));
-      const trailerLen = Number($("tlen").value || 0);
-      const towing = trailerLen > 0;
-      const mode = $("mode").value;
+    <label>
+      Mode
+      <select id="mode">
+        <option value="TOW" selected>TOW</option>
+        <option value="LOW_STRESS">LOW_STRESS</option>
+        <option value="FUEL_SAVER">FUEL_SAVER</option>
+        <option value="FASTEST">FASTEST</option>
+      </select>
+    </label>
 
-      const body = {
-        requestId: "req_" + Date.now(),
-        origin: { lat: 36.0, lng: -84.0 },
-        destination: { lat: 36.2, lng: -84.1 },
-        time: { departureType: "now" },
-        mode: { primary: mode, alsoReturn: ["LOW_STRESS","TOW","FASTEST","FUEL_SAVER"] },
-        userState: { stressTolerance: stress },
-        vehicleProfile: {
-          vehicleType: "TRUCK",
-          trailer: towing ? { enabled: true, type: "UTILITY", lengthFt: trailerLen, weightClass: "LIGHT" }
-                         : { enabled: false }
-        },
-        constraints: { largeTrailerThresholdFt: 16, destinationExceptionRadiusMiles: 1.0, maxRouteCountPerMode: 2 }
-      };
+    <label style="min-width: 220px;">
+      Origin (optional)
+      <input id="origin" type="text" placeholder="e.g. lat,lng or address" />
+    </label>
 
-      const res = await fetch("http://localhost:8080/v1/route/plan", {
+    <label style="min-width: 220px;">
+      Destination (optional)
+      <input id="destination" type="text" placeholder="e.g. lat,lng or address" />
+    </label>
+
+    <button id="planBtn">Plan route</button>
+  </div>
+
+  <div class="card">
+    <div class="small" style="margin-bottom:10px;">
+      Request will be sent to:
+      <span class="pill" id="fullUrlPill">…</span>
+    </div>
+
+    <div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:10px;">
+      <button id="copyReqBtn" type="button">Copy request JSON</button>
+      <button id="copyCurlBtn" type="button">Copy curl</button>
+      <span id="status" class="small"></span>
+    </div>
+
+    <h3 style="margin:10px 0 10px;">Response</h3>
+    <pre id="out">{}</pre>
+  </div>
+
+<script>
+  function resolveApiBase() {
+    const params = new URLSearchParams(window.location.search);
+
+    // 1) Manual override via ?api=
+    const override = params.get("api");
+    if (override) return override.replace(/\/+$/, "");
+
+    // 2) If running locally, use local API
+    if (location.hostname === "localhost" || location.hostname === "127.0.0.1") {
+      return "http://localhost:8080";
+    }
+
+    // 3) Production default (change this once your API is deployed)
+    return "https://api.yourdomain.com";
+  }
+
+  const API_BASE = resolveApiBase();
+  const ROUTE_PATH = "/v1/route/plan";
+
+  const el = (id) => document.getElementById(id);
+  const out = el("out");
+  const statusEl = el("status");
+  const planBtn = el("planBtn");
+
+  el("apiBasePill").textContent = API_BASE;
+  el("fullUrlPill").textContent = API_BASE + ROUTE_PATH;
+
+  function buildPayload() {
+    const payload = {
+      stress: Number(el("stress").value),
+      trailerLengthFt: Number(el("trailerLengthFt").value),
+      mode: el("mode").value
+    };
+
+    const origin = el("origin").value.trim();
+    const destination = el("destination").value.trim();
+    if (origin) payload.origin = origin;
+    if (destination) payload.destination = destination;
+
+    return payload;
+  }
+
+  function pretty(obj) {
+    return JSON.stringify(obj, null, 2);
+  }
+
+  async function copyText(text) {
+    await navigator.clipboard.writeText(text);
+    statusEl.textContent = "Copied to clipboard.";
+    setTimeout(() => (statusEl.textContent = ""), 1200);
+  }
+
+  el("copyReqBtn").addEventListener("click", async () => {
+    try {
+      await copyText(pretty(buildPayload()));
+    } catch (e) {
+      statusEl.innerHTML = '<span class="danger">Copy failed (clipboard blocked).</span>';
+    }
+  });
+
+  el("copyCurlBtn").addEventListener("click", async () => {
+    const payload = buildPayload();
+    const curl = [
+      `curl -X POST "${API_BASE + ROUTE_PATH}"`,
+      `  -H "content-type: application/json"`,
+      `  -d '${JSON.stringify(payload)}'`
+    ].join(" \\\n");
+    try {
+      await copyText(curl);
+    } catch (e) {
+      statusEl.innerHTML = '<span class="danger">Copy failed (clipboard blocked).</span>';
+    }
+  });
+
+  async function planRoute() {
+    planBtn.disabled = true;
+    statusEl.textContent = "Requesting…";
+
+    const payload = buildPayload();
+    const url = API_BASE + ROUTE_PATH;
+
+    try {
+      const res = await fetch(url, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body)
+        body: JSON.stringify(payload)
       });
 
-      const json = await res.json();
-      $("out").textContent = JSON.stringify(json, null, 2);
-    };
-  </script>
+      const contentType = (res.headers.get("content-type") || "").toLowerCase();
+      const isJson = contentType.includes("application/json");
+
+      let bodyText = "";
+      let data = null;
+
+      if (isJson) {
+        data = await res.json();
+      } else {
+        bodyText = await res.text();
+      }
+
+      if (!res.ok) {
+        const errPayload = {
+          error: "HTTP_ERROR",
+          status: res.status,
+          statusText: res.statusText,
+          url,
+          response: isJson ? data : bodyText
+        };
+        out.textContent = pretty(errPayload);
+        statusEl.innerHTML = `<span class="danger">HTTP ${res.status} ${res.statusText}</span>`;
+        return;
+      }
+
+      out.textContent = isJson ? pretty(data) : bodyText;
+      statusEl.innerHTML = `<span class="ok">OK</span>`;
+
+    } catch (err) {
+      // Common cases:
+      // - API not running (ERR_CONNECTION_REFUSED)
+      // - CORS blocked
+      // - Mixed content / HTTPS calling http://
+      const help = {
+        error: "FETCH_FAILED",
+        message: String(err && err.message ? err.message : err),
+        url: API_BASE + ROUTE_PATH,
+        likelyFixes: [
+          "If you're on GitHub Pages: your API must be reachable publicly and allow CORS for this origin.",
+          "If API is local: run the backend on http://localhost:8080 (or use ?api=http://host:port).",
+          "If page is HTTPS: prefer an HTTPS API URL to avoid mixed-content blocking."
+        ]
+      };
+      out.textContent = pretty(help);
+      statusEl.innerHTML = `<span class="danger">Fetch failed</span>`;
+    } finally {
+      planBtn.disabled = false;
+      setTimeout(() => (statusEl.textContent = ""), 2500);
+    }
+  }
+
+  planBtn.addEventListener("click", planRoute);
+</script>
 </body>
 </html>
