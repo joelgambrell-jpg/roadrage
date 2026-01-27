@@ -1,285 +1,985 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Roadrage — Route Planner Demo</title>
-  <style>
-    :root { color-scheme: light; }
-    body {
-      font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
-      margin: 28px;
-      line-height: 1.35;
-    }
-    h1 { margin: 0 0 10px; font-size: 34px; }
-    .sub { margin: 0 0 18px; color: #444; }
-    .row { display: flex; flex-wrap: wrap; gap: 14px 18px; align-items: end; margin: 14px 0 18px; }
-    label { display: grid; gap: 6px; font-size: 13px; color: #222; }
-    input, select, button {
-      font: inherit;
-      padding: 10px 12px;
-      border: 1px solid #bbb;
-      border-radius: 6px;
-      min-width: 160px;
-    }
-    button { cursor: pointer; min-width: 140px; }
-    button:disabled { cursor: not-allowed; opacity: 0.65; }
-    .meta {
-      display: grid;
-      gap: 6px;
-      margin: 4px 0 18px;
-      font-size: 13px;
-      color: #333;
-    }
-    .pill {
-      display: inline-block;
-      padding: 4px 8px;
-      border: 1px solid #ccc;
-      border-radius: 999px;
-      font-size: 12px;
-      background: #f7f7f7;
-      max-width: 100%;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-      vertical-align: middle;
-    }
-    .hint { color: #666; }
-    .card {
-      border: 1px solid #ddd;
-      border-radius: 10px;
-      padding: 14px;
-      margin-top: 14px;
-    }
-    pre {
-      margin: 0;
-      padding: 14px;
-      border-radius: 10px;
-      background: #111;
-      color: #eee;
-      overflow: auto;
-      min-height: 70px;
-      white-space: pre-wrap;
-      word-break: break-word;
-    }
-    .small { font-size: 12px; color: #555; }
-    .danger { color: #a00; font-weight: 650; }
-    .ok { color: #0a6; font-weight: 650; }
-  </style>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Roadrage — Route Planner</title>
+
+<!-- Leaflet (map) -->
+<link
+  rel="stylesheet"
+  href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+  integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+  crossorigin=""
+/>
+<script
+  src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+  integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+  crossorigin=""
+></script>
+
+<style>
+  :root{
+    color-scheme: dark;
+    --bg0: rgba(10,14,22,0.74);
+    --bg1: rgba(12,18,30,0.58);
+    --line: rgba(255,255,255,0.14);
+    --text: #e6edf7;
+    --muted: #a8b3c7;
+    --blue: #3b82f6;
+    --blue2:#2563eb;
+    --ok: #22c55e;
+    --bad:#ef4444;
+  }
+
+  body{
+    margin:0;
+    min-height:100vh;
+    font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+    color: var(--text);
+
+    background:
+      linear-gradient(rgba(8,10,16,0.72), rgba(8,10,16,0.92)),
+      url("./assets/vehicles-hero.png") center top / cover no-repeat fixed;
+  }
+
+  .wrap{
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 34px 16px 54px;
+  }
+
+  .hero{
+    display:flex;
+    justify-content: space-between;
+    gap: 18px;
+    align-items: end;
+    margin-bottom: 14px;
+  }
+
+  h1{
+    margin:0;
+    font-size: 34px;
+    letter-spacing: 0.2px;
+  }
+
+  .sub{
+    margin-top: 6px;
+    color: var(--muted);
+    font-size: 13px;
+  }
+
+  .pill{
+    display:inline-block;
+    padding: 4px 10px;
+    border: 1px solid var(--line);
+    background: rgba(255,255,255,0.07);
+    border-radius: 999px;
+    font-size: 12px;
+    color: var(--text);
+    max-width: 520px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    vertical-align: middle;
+  }
+
+  .grid{
+    display:grid;
+    grid-template-columns: 1.05fr 0.95fr;
+    gap: 16px;
+  }
+
+  @media (max-width: 980px){
+    .grid{ grid-template-columns: 1fr; }
+    .hero{ flex-direction: column; align-items: start; }
+  }
+
+  .card{
+    border: 1px solid var(--line);
+    border-radius: 18px;
+    background: linear-gradient(180deg, var(--bg1), rgba(0,0,0,0.35));
+    backdrop-filter: blur(12px);
+    box-shadow: 0 22px 56px rgba(0,0,0,0.40);
+    overflow: hidden;
+  }
+
+  .cardHead{
+    padding: 14px 16px 12px;
+    border-bottom: 1px solid var(--line);
+    display:flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .cardTitle{
+    font-size: 13px;
+    color: var(--muted);
+    letter-spacing: .2px;
+  }
+
+  .cardBody{
+    padding: 14px 16px 16px;
+  }
+
+  .row{
+    display:flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    align-items: end;
+  }
+
+  label{
+    display:flex;
+    flex-direction: column;
+    gap: 6px;
+    font-size: 12px;
+    color: var(--muted);
+  }
+
+  input, select, button, textarea{
+    font: inherit;
+    border-radius: 10px;
+    border: 1px solid var(--line);
+    background: rgba(255,255,255,0.06);
+    color: var(--text);
+    padding: 10px 12px;
+    outline: none;
+  }
+
+  input::placeholder, textarea::placeholder{ color: rgba(168,179,199,0.75); }
+
+  button{
+    cursor:pointer;
+    border: none;
+    background: linear-gradient(135deg, var(--blue2), var(--blue));
+    font-weight: 650;
+    padding: 11px 14px;
+  }
+
+  button:disabled{
+    opacity: 0.55;
+    cursor: not-allowed;
+  }
+
+  .btnGhost{
+    background: rgba(255,255,255,0.08);
+    border: 1px solid var(--line);
+    color: var(--text);
+    font-weight: 600;
+  }
+
+  .btnTiny{
+    padding: 8px 10px;
+    font-size: 12px;
+    border-radius: 10px;
+  }
+
+  .presetBar{
+    display:flex;
+    flex-wrap:wrap;
+    gap: 10px;
+    align-items:center;
+  }
+
+  .preset{
+    display:flex;
+    gap: 8px;
+    align-items:center;
+    border: 1px solid var(--line);
+    background: rgba(255,255,255,0.07);
+    color: var(--text);
+    border-radius: 12px;
+    padding: 10px 12px;
+    cursor: pointer;
+    user-select: none;
+  }
+
+  .preset.active{
+    border-color: rgba(59,130,246,0.65);
+    box-shadow: 0 0 0 2px rgba(59,130,246,0.22) inset;
+  }
+
+  .preset b{ font-size: 13px; }
+  .preset span{ font-size: 12px; color: var(--muted); }
+
+  .hr{
+    height: 1px;
+    background: var(--line);
+    margin: 14px 0;
+  }
+
+  .advToggle{
+    display:flex;
+    align-items:center;
+    justify-content: space-between;
+    gap: 10px;
+    width: 100%;
+    cursor:pointer;
+    user-select:none;
+    padding: 10px 12px;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    background: rgba(255,255,255,0.06);
+  }
+
+  .advToggle .left{
+    display:flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .advToggle .left .t{
+    color: var(--text);
+    font-size: 13px;
+    font-weight: 650;
+  }
+
+  .advToggle .left .d{
+    color: var(--muted);
+    font-size: 12px;
+  }
+
+  .adv{
+    display:none;
+    margin-top: 12px;
+  }
+
+  .adv.open{ display:block; }
+
+  #map{
+    height: 340px;
+    border-radius: 14px;
+    border: 1px solid var(--line);
+    overflow: hidden;
+    background: rgba(0,0,0,0.35);
+  }
+
+  .mono{
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+    font-size: 12px;
+  }
+
+  pre{
+    margin: 0;
+    padding: 12px;
+    border-radius: 14px;
+    background: rgba(0,0,0,0.55);
+    border: 1px solid var(--line);
+    overflow:auto;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+
+  .kv{
+    display:grid;
+    grid-template-columns: 130px 1fr;
+    gap: 8px 10px;
+    align-items: start;
+    font-size: 12px;
+    color: var(--muted);
+  }
+  .kv b{ color: var(--text); font-weight: 650; }
+
+  .status{
+    font-size: 12px;
+    color: var(--muted);
+  }
+  .status .ok{ color: var(--ok); font-weight: 700; }
+  .status .bad{ color: var(--bad); font-weight: 700; }
+
+  .history{
+    display:flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .hItem{
+    border: 1px solid var(--line);
+    background: rgba(255,255,255,0.05);
+    border-radius: 14px;
+    padding: 10px 12px;
+  }
+
+  .hTop{
+    display:flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 10px;
+    margin-bottom: 6px;
+  }
+
+  .hTop b{ font-size: 13px; }
+  .hTop span{ font-size: 12px; color: var(--muted); }
+
+  .hMeta{
+    display:flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    color: var(--muted);
+    font-size: 12px;
+  }
+
+  a { color: #9ec2ff; text-decoration: none; }
+  a:hover { text-decoration: underline; }
+</style>
 </head>
 
 <body>
-  <h1>Roadrage — Route Planner Demo</h1>
-  <p class="sub">
-    This page calls the API endpoint <span class="pill" id="apiBasePill">…</span><span class="hint">/v1/route/plan</span>
-  </p>
-
-  <div class="meta">
-    <div>
-      Resolution order:
-      <span class="pill">?api=</span>
-      → <span class="pill">localhost auto</span>
-      → <span class="pill">production default</span>
-    </div>
-    <div class="small">
-      Override example:
-      <span class="pill">?api=https://your-api.example.com</span>
-      or
-      <span class="pill">?api=http://192.168.1.50:8080</span>
-    </div>
-  </div>
-
-  <div class="row">
-    <label>
-      Stress (1–100)
-      <input id="stress" type="number" min="1" max="100" step="1" value="25" />
-    </label>
-
-    <label>
-      Trailer length (ft)
-      <input id="trailerLengthFt" type="number" min="0" max="80" step="0.5" value="16" />
-    </label>
-
-    <label>
-      Mode
-      <select id="mode">
-        <option value="TOW" selected>TOW</option>
-        <option value="LOW_STRESS">LOW_STRESS</option>
-        <option value="FUEL_SAVER">FUEL_SAVER</option>
-        <option value="FASTEST">FASTEST</option>
-      </select>
-    </label>
-
-    <label style="min-width: 220px;">
-      Origin (optional)
-      <input id="origin" type="text" placeholder="e.g. lat,lng or address" />
-    </label>
-
-    <label style="min-width: 220px;">
-      Destination (optional)
-      <input id="destination" type="text" placeholder="e.g. lat,lng or address" />
-    </label>
-
-    <button id="planBtn">Plan route</button>
-  </div>
-
-  <div class="card">
-    <div class="small" style="margin-bottom:10px;">
-      Request will be sent to:
-      <span class="pill" id="fullUrlPill">…</span>
+  <div class="wrap">
+    <div class="hero">
+      <div>
+        <h1>Roadrage — Route Planner</h1>
+        <div class="sub">
+          API base: <span class="pill mono" id="apiBasePill">…</span>
+          <span class="mono">/v1/route/plan</span>
+        </div>
+      </div>
+      <div class="sub">
+        Override:
+        <span class="pill mono">?api=https://your-api.example.com</span>
+      </div>
     </div>
 
-    <div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:10px;">
-      <button id="copyReqBtn" type="button">Copy request JSON</button>
-      <button id="copyCurlBtn" type="button">Copy curl</button>
-      <span id="status" class="small"></span>
-    </div>
+    <div class="grid">
+      <!-- LEFT: Planner -->
+      <div class="card">
+        <div class="cardHead">
+          <div class="cardTitle">Planner</div>
+          <div class="status mono" id="status">Ready</div>
+        </div>
 
-    <h3 style="margin:10px 0 10px;">Response</h3>
-    <pre id="out">{}</pre>
+        <div class="cardBody">
+          <!-- Presets -->
+          <div class="presetBar" id="presetBar">
+            <div class="preset active" data-preset="TOW">
+              <div>
+                <b>Tow</b><br><span>Trailer-aware routing</span>
+              </div>
+            </div>
+            <div class="preset" data-preset="LOW_STRESS">
+              <div>
+                <b>Low Stress</b><br><span>Comfort prioritized</span>
+              </div>
+            </div>
+            <div class="preset" data-preset="FUEL_SAVER">
+              <div>
+                <b>Fuel Saver</b><br><span>Efficiency prioritized</span>
+              </div>
+            </div>
+            <div class="preset" data-preset="FASTEST">
+              <div>
+                <b>Fastest</b><br><span>Time prioritized</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="hr"></div>
+
+          <!-- Core inputs -->
+          <div class="row">
+            <label>
+              Stress (1–100)
+              <input id="stress" type="number" min="1" max="100" step="1" value="25" />
+            </label>
+
+            <label>
+              Trailer length (ft)
+              <input id="trailerLengthFt" type="number" min="0" max="80" step="0.5" value="16" />
+            </label>
+
+            <label>
+              Mode
+              <select id="mode">
+                <option value="TOW" selected>TOW</option>
+                <option value="LOW_STRESS">LOW_STRESS</option>
+                <option value="FUEL_SAVER">FUEL_SAVER</option>
+                <option value="FASTEST">FASTEST</option>
+              </select>
+            </label>
+
+            <label style="min-width: 220px;">
+              Origin (lat,lng)
+              <input id="origin" type="text" placeholder="e.g. 40.4406,-79.9959" />
+            </label>
+
+            <label style="min-width: 220px;">
+              Destination (lat,lng)
+              <input id="destination" type="text" placeholder="e.g. 39.9526,-75.1652" />
+            </label>
+
+            <button id="planBtn">Plan Route</button>
+            <button class="btnGhost" id="swapBtn" type="button">Swap</button>
+          </div>
+
+          <div class="row" style="margin-top:10px;">
+            <button class="btnGhost btnTiny" id="copyReqBtn" type="button">Copy request JSON</button>
+            <button class="btnGhost btnTiny" id="copyCurlBtn" type="button">Copy curl</button>
+            <button class="btnGhost btnTiny" id="openMapsBtn" type="button">Open in Maps</button>
+          </div>
+
+          <div class="hr"></div>
+
+          <!-- Advanced -->
+          <div class="advToggle" id="advToggle">
+            <div class="left">
+              <div class="t">Advanced</div>
+              <div class="d">Avoid options, lane strategy, tow confidence, notes</div>
+            </div>
+            <div class="pill mono" id="advState">closed</div>
+          </div>
+
+          <div class="adv" id="advPanel">
+            <div class="row" style="margin-top:12px;">
+              <label>
+                Avoid highways
+                <select id="avoidHighways">
+                  <option value="false" selected>false</option>
+                  <option value="true">true</option>
+                </select>
+              </label>
+
+              <label>
+                Avoid tolls
+                <select id="avoidTolls">
+                  <option value="false" selected>false</option>
+                  <option value="true">true</option>
+                </select>
+              </label>
+
+              <label>
+                Avoid ferries
+                <select id="avoidFerries">
+                  <option value="false" selected>false</option>
+                  <option value="true">true</option>
+                </select>
+              </label>
+
+              <label>
+                Avoid unpaved
+                <select id="avoidUnpaved">
+                  <option value="false" selected>false</option>
+                  <option value="true">true</option>
+                </select>
+              </label>
+
+              <label>
+                Lane strategy importance (0–100)
+                <input id="laneImportance" type="number" min="0" max="100" step="1" value="50" />
+              </label>
+
+              <label>
+                Tow confidence target (0–100)
+                <input id="towConfidenceTarget" type="number" min="0" max="100" step="1" value="70" />
+              </label>
+
+              <label>
+                Notes
+                <input id="notes" type="text" placeholder="optional" />
+              </label>
+            </div>
+          </div>
+
+          <div class="hr"></div>
+
+          <!-- Map -->
+          <div id="map"></div>
+
+          <div class="sub" style="margin-top:10px;">
+            Tip: inputs accept <span class="pill mono">lat,lng</span>. When your API returns geometry (GeoJSON or polyline),
+            this map will draw it automatically.
+          </div>
+        </div>
+      </div>
+
+      <!-- RIGHT: Debug + History -->
+      <div class="card">
+        <div class="cardHead">
+          <div class="cardTitle">Debug & History</div>
+          <div class="row" style="gap:8px; margin:0;">
+            <button class="btnGhost btnTiny" id="clearHistoryBtn" type="button">Clear history</button>
+          </div>
+        </div>
+
+        <div class="cardBody">
+          <div class="kv mono" style="margin-bottom:12px;">
+            <div>Resolved API:</div><b id="dbgApi">…</b>
+            <div>Endpoint:</div><b id="dbgUrl">…</b>
+            <div>Last status:</div><b id="dbgStatus">—</b>
+            <div>Timing:</div><b id="dbgTiming">—</b>
+          </div>
+
+          <div class="sub" style="margin: 6px 0 8px;">Request</div>
+          <pre class="mono" id="dbgReq">{}</pre>
+
+          <div class="sub" style="margin: 12px 0 8px;">Response / Error</div>
+          <pre class="mono" id="dbgRes">{}</pre>
+
+          <div class="hr"></div>
+
+          <div class="sub" style="margin: 0 0 10px;">Recent plans (localStorage)</div>
+          <div class="history" id="history"></div>
+        </div>
+      </div>
+    </div>
   </div>
 
 <script>
+  // -------------------------
+  // Option C API resolution
+  // -------------------------
   function resolveApiBase() {
-    const params = new URLSearchParams(window.location.search);
+    const params = new URLSearchParams(location.search);
 
-    // 1) Manual override via ?api=
+    // 1) manual override
     const override = params.get("api");
     if (override) return override.replace(/\/+$/, "");
 
-    // 2) If running locally, use local API
+    // 2) local dev
     if (location.hostname === "localhost" || location.hostname === "127.0.0.1") {
       return "http://localhost:8080";
     }
 
-    // 3) Production default (change this once your API is deployed)
+    // 3) production default (set this once deployed)
     return "https://api.yourdomain.com";
   }
 
   const API_BASE = resolveApiBase();
-  const ROUTE_PATH = "/v1/route/plan";
+  const ENDPOINT = "/v1/route/plan";
+  const FULL_URL = API_BASE + ENDPOINT;
 
-  const el = (id) => document.getElementById(id);
-  const out = el("out");
-  const statusEl = el("status");
-  const planBtn = el("planBtn");
+  // -------------------------
+  // DOM helpers
+  // -------------------------
+  const $ = (id) => document.getElementById(id);
+  const statusEl = $("status");
 
-  el("apiBasePill").textContent = API_BASE;
-  el("fullUrlPill").textContent = API_BASE + ROUTE_PATH;
+  $("apiBasePill").textContent = API_BASE;
+  $("dbgApi").textContent = API_BASE;
+  $("dbgUrl").textContent = FULL_URL;
 
+  // -------------------------
+  // Presets
+  // -------------------------
+  const presets = {
+    TOW: { mode: "TOW", stress: 25, trailerLengthFt: 16, laneImportance: 60, towConfidenceTarget: 75 },
+    LOW_STRESS: { mode: "LOW_STRESS", stress: 15, trailerLengthFt: 0, laneImportance: 75, towConfidenceTarget: 0 },
+    FUEL_SAVER: { mode: "FUEL_SAVER", stress: 35, trailerLengthFt: 0, laneImportance: 40, towConfidenceTarget: 0 },
+    FASTEST: { mode: "FASTEST", stress: 50, trailerLengthFt: 0, laneImportance: 25, towConfidenceTarget: 0 }
+  };
+
+  function setPreset(name) {
+    const p = presets[name];
+    if (!p) return;
+
+    $("mode").value = p.mode;
+    $("stress").value = p.stress;
+    $("trailerLengthFt").value = p.trailerLengthFt;
+    $("laneImportance").value = p.laneImportance;
+    $("towConfidenceTarget").value = p.towConfidenceTarget;
+
+    [...document.querySelectorAll(".preset")].forEach(el => {
+      el.classList.toggle("active", el.dataset.preset === name);
+    });
+  }
+
+  $("presetBar").addEventListener("click", (e) => {
+    const box = e.target.closest(".preset");
+    if (!box) return;
+    setPreset(box.dataset.preset);
+  });
+
+  // -------------------------
+  // Advanced toggle
+  // -------------------------
+  let advOpen = false;
+  $("advToggle").addEventListener("click", () => {
+    advOpen = !advOpen;
+    $("advPanel").classList.toggle("open", advOpen);
+    $("advState").textContent = advOpen ? "open" : "closed";
+  });
+
+  // -------------------------
+  // Map (Leaflet)
+  // -------------------------
+  const map = L.map("map", { zoomControl: true }).setView([39.5, -98.35], 4); // US-ish
+  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+    maxZoom: 19,
+    attribution: "&copy; OpenStreetMap"
+  }).addTo(map);
+
+  let originMarker = null;
+  let destMarker = null;
+  let routeLine = null;
+
+  function clearRoute() {
+    if (routeLine) { map.removeLayer(routeLine); routeLine = null; }
+  }
+
+  function parseLatLng(s) {
+    const m = String(s || "").trim().match(/^(-?\d+(\.\d+)?),\s*(-?\d+(\.\d+)?)$/);
+    if (!m) return null;
+    const lat = Number(m[1]);
+    const lng = Number(m[3]);
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
+    if (lat < -90 || lat > 90 || lng < -180 || lng > 180) return null;
+    return [lat, lng];
+  }
+
+  function ensureMarker(existing, latlng, label) {
+    if (!latlng) return existing;
+    if (!existing) {
+      existing = L.marker(latlng).addTo(map).bindPopup(label);
+    } else {
+      existing.setLatLng(latlng);
+    }
+    return existing;
+  }
+
+  function fitToMarkers() {
+    const pts = [];
+    if (originMarker) pts.push(originMarker.getLatLng());
+    if (destMarker) pts.push(destMarker.getLatLng());
+    if (pts.length === 2) map.fitBounds(L.latLngBounds(pts), { padding: [30,30] });
+    else if (pts.length === 1) map.setView(pts[0], 12);
+  }
+
+  function drawGeoJsonLine(coordsLngLat) {
+    // coords expected [[lng,lat],...]
+    const latlngs = coordsLngLat.map(([lng, lat]) => [lat, lng]);
+    if (routeLine) map.removeLayer(routeLine);
+    routeLine = L.polyline(latlngs, { weight: 5, opacity: 0.9 }).addTo(map);
+    map.fitBounds(routeLine.getBounds(), { padding: [30,30] });
+  }
+
+  // Minimal polyline decoder (Google polyline)
+  function decodePolyline(str) {
+    let index = 0, lat = 0, lng = 0, coordinates = [];
+    while (index < str.length) {
+      let b, shift = 0, result = 0;
+      do { b = str.charCodeAt(index++) - 63; result |= (b & 0x1f) << shift; shift += 5; } while (b >= 0x20);
+      const dlat = (result & 1) ? ~(result >> 1) : (result >> 1);
+      lat += dlat;
+
+      shift = 0; result = 0;
+      do { b = str.charCodeAt(index++) - 63; result |= (b & 0x1f) << shift; shift += 5; } while (b >= 0x20);
+      const dlng = (result & 1) ? ~(result >> 1) : (result >> 1);
+      lng += dlng;
+
+      coordinates.push([lat / 1e5, lng / 1e5]);
+    }
+    return coordinates; // [[lat,lng],...]
+  }
+
+  function drawPolyline(encoded) {
+    const latlngs = decodePolyline(encoded);
+    if (routeLine) map.removeLayer(routeLine);
+    routeLine = L.polyline(latlngs, { weight: 5, opacity: 0.9 }).addTo(map);
+    map.fitBounds(routeLine.getBounds(), { padding: [30,30] });
+  }
+
+  // -------------------------
+  // History
+  // -------------------------
+  const HISTORY_KEY = "roadrage_demo_history_v1";
+
+  function loadHistory() {
+    try { return JSON.parse(localStorage.getItem(HISTORY_KEY) || "[]"); }
+    catch { return []; }
+  }
+
+  function saveHistory(items) {
+    localStorage.setItem(HISTORY_KEY, JSON.stringify(items.slice(0, 10)));
+  }
+
+  function renderHistory() {
+    const items = loadHistory();
+    const box = $("history");
+    box.innerHTML = "";
+
+    if (!items.length) {
+      box.innerHTML = `<div class="sub">No history yet.</div>`;
+      return;
+    }
+
+    for (const it of items) {
+      const el = document.createElement("div");
+      el.className = "hItem";
+      el.innerHTML = `
+        <div class="hTop">
+          <b class="mono">${escapeHtml(it.mode || "—")} • stress ${it.stress} • trailer ${it.trailerLengthFt}ft</b>
+          <span class="mono">${escapeHtml(it.when || "")}</span>
+        </div>
+        <div class="hMeta mono">
+          <span class="pill">HTTP ${escapeHtml(String(it.httpStatus ?? "—"))}</span>
+          <span class="pill">${escapeHtml(String(it.ms ?? "—"))}ms</span>
+          <span class="pill">${escapeHtml(it.origin || "origin: —")}</span>
+          <span class="pill">${escapeHtml(it.destination || "dest: —")}</span>
+        </div>
+      `;
+      box.appendChild(el);
+    }
+  }
+
+  $("clearHistoryBtn").addEventListener("click", () => {
+    localStorage.removeItem(HISTORY_KEY);
+    renderHistory();
+  });
+
+  function pushHistory(entry) {
+    const items = loadHistory();
+    items.unshift(entry);
+    saveHistory(items);
+    renderHistory();
+  }
+
+  function nowStamp() {
+    const d = new Date();
+    return d.toLocaleString();
+  }
+
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, (c) => ({
+      "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"
+    }[c]));
+  }
+
+  renderHistory();
+
+  // -------------------------
+  // Build request payload
+  // -------------------------
   function buildPayload() {
     const payload = {
-      stress: Number(el("stress").value),
-      trailerLengthFt: Number(el("trailerLengthFt").value),
-      mode: el("mode").value
+      stress: Number($("stress").value),
+      trailerLengthFt: Number($("trailerLengthFt").value),
+      mode: $("mode").value,
+      options: {
+        avoidHighways: $("avoidHighways").value === "true",
+        avoidTolls: $("avoidTolls").value === "true",
+        avoidFerries: $("avoidFerries").value === "true",
+        avoidUnpaved: $("avoidUnpaved").value === "true"
+      },
+      laneStrategy: {
+        importance: Number($("laneImportance").value)
+      },
+      tow: {
+        confidenceTarget: Number($("towConfidenceTarget").value)
+      },
+      notes: ($("notes").value || "").trim()
     };
 
-    const origin = el("origin").value.trim();
-    const destination = el("destination").value.trim();
-    if (origin) payload.origin = origin;
-    if (destination) payload.destination = destination;
+    const o = ($("origin").value || "").trim();
+    const d = ($("destination").value || "").trim();
+    if (o) payload.origin = o;
+    if (d) payload.destination = d;
 
     return payload;
   }
 
-  function pretty(obj) {
-    return JSON.stringify(obj, null, 2);
-  }
+  function pretty(x) { return JSON.stringify(x, null, 2); }
 
+  // -------------------------
+  // Copy helpers
+  // -------------------------
   async function copyText(text) {
     await navigator.clipboard.writeText(text);
-    statusEl.textContent = "Copied to clipboard.";
-    setTimeout(() => (statusEl.textContent = ""), 1200);
+    statusEl.textContent = "Copied";
+    setTimeout(() => statusEl.textContent = "Ready", 900);
   }
 
-  el("copyReqBtn").addEventListener("click", async () => {
-    try {
-      await copyText(pretty(buildPayload()));
-    } catch (e) {
-      statusEl.innerHTML = '<span class="danger">Copy failed (clipboard blocked).</span>';
-    }
+  $("copyReqBtn").addEventListener("click", async () => {
+    try { await copyText(pretty(buildPayload())); }
+    catch { statusEl.innerHTML = '<span class="bad">Copy blocked</span>'; }
   });
 
-  el("copyCurlBtn").addEventListener("click", async () => {
+  $("copyCurlBtn").addEventListener("click", async () => {
     const payload = buildPayload();
     const curl = [
-      `curl -X POST "${API_BASE + ROUTE_PATH}"`,
+      `curl -X POST "${FULL_URL}"`,
       `  -H "content-type: application/json"`,
       `  -d '${JSON.stringify(payload)}'`
     ].join(" \\\n");
-    try {
-      await copyText(curl);
-    } catch (e) {
-      statusEl.innerHTML = '<span class="danger">Copy failed (clipboard blocked).</span>';
-    }
+    try { await copyText(curl); }
+    catch { statusEl.innerHTML = '<span class="bad">Copy blocked</span>'; }
   });
 
-  async function planRoute() {
+  $("openMapsBtn").addEventListener("click", () => {
+    const o = parseLatLng(($("origin").value || "").trim());
+    const d = parseLatLng(($("destination").value || "").trim());
+    if (!o || !d) {
+      statusEl.innerHTML = '<span class="bad">Use lat,lng for Maps</span>';
+      setTimeout(() => statusEl.textContent = "Ready", 1200);
+      return;
+    }
+    // Google Maps directions
+    const url = `https://www.google.com/maps/dir/?api=1&origin=${o[0]},${o[1]}&destination=${d[0]},${d[1]}`;
+    window.open(url, "_blank", "noopener,noreferrer");
+  });
+
+  $("swapBtn").addEventListener("click", () => {
+    const a = $("origin").value;
+    $("origin").value = $("destination").value;
+    $("destination").value = a;
+    updateMarkersFromInputs();
+  });
+
+  // -------------------------
+  // Marker updates
+  // -------------------------
+  function updateMarkersFromInputs() {
+    const o = parseLatLng(($("origin").value || "").trim());
+    const d = parseLatLng(($("destination").value || "").trim());
+
+    if (o) originMarker = ensureMarker(originMarker, o, "Origin");
+    if (d) destMarker = ensureMarker(destMarker, d, "Destination");
+
+    // clear route if user changes endpoints
+    clearRoute();
+    fitToMarkers();
+  }
+
+  $("origin").addEventListener("change", updateMarkersFromInputs);
+  $("destination").addEventListener("change", updateMarkersFromInputs);
+
+  // Seed map with sample points if empty
+  if (!$("origin").value) $("origin").value = "40.4406,-79.9959";      // Pittsburgh
+  if (!$("destination").value) $("destination").value = "39.9526,-75.1652"; // Philly
+  updateMarkersFromInputs();
+
+  // -------------------------
+  // Plan route
+  // -------------------------
+  const planBtn = $("planBtn");
+
+  function setStatus(text, kind) {
+    if (kind === "ok") statusEl.innerHTML = `<span class="ok">${text}</span>`;
+    else if (kind === "bad") statusEl.innerHTML = `<span class="bad">${text}</span>`;
+    else statusEl.textContent = text;
+  }
+
+  planBtn.addEventListener("click", async () => {
     planBtn.disabled = true;
-    statusEl.textContent = "Requesting…";
+    setStatus("Requesting…", null);
 
     const payload = buildPayload();
-    const url = API_BASE + ROUTE_PATH;
+    $("dbgReq").textContent = pretty(payload);
+
+    const t0 = performance.now();
 
     try {
-      const res = await fetch(url, {
+      const res = await fetch(FULL_URL, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload)
       });
 
+      const ms = Math.round(performance.now() - t0);
+      $("dbgTiming").textContent = `${ms}ms`;
+
       const contentType = (res.headers.get("content-type") || "").toLowerCase();
       const isJson = contentType.includes("application/json");
 
-      let bodyText = "";
-      let data = null;
+      const body = isJson ? await res.json() : await res.text();
 
-      if (isJson) {
-        data = await res.json();
-      } else {
-        bodyText = await res.text();
-      }
+      $("dbgStatus").textContent = `${res.status} ${res.statusText}`;
 
       if (!res.ok) {
-        const errPayload = {
+        const errObj = {
           error: "HTTP_ERROR",
           status: res.status,
           statusText: res.statusText,
-          url,
-          response: isJson ? data : bodyText
+          url: FULL_URL,
+          response: body
         };
-        out.textContent = pretty(errPayload);
-        statusEl.innerHTML = `<span class="danger">HTTP ${res.status} ${res.statusText}</span>`;
+        $("dbgRes").textContent = pretty(errObj);
+        setStatus(`HTTP ${res.status}`, "bad");
+
+        pushHistory({
+          when: nowStamp(),
+          mode: payload.mode,
+          stress: payload.stress,
+          trailerLengthFt: payload.trailerLengthFt,
+          origin: payload.origin || "origin: —",
+          destination: payload.destination || "dest: —",
+          httpStatus: res.status,
+          ms
+        });
+
         return;
       }
 
-      out.textContent = isJson ? pretty(data) : bodyText;
-      statusEl.innerHTML = `<span class="ok">OK</span>`;
+      $("dbgRes").textContent = isJson ? pretty(body) : String(body);
+      setStatus("OK", "ok");
+
+      // Try drawing route if API returns geometry in common shapes
+      // Supported:
+      // - body.route.geometry.type === "LineString" with coordinates [[lng,lat],...]
+      // - body.geometry.type === "LineString"
+      // - body.polyline (encoded)
+      // - body.route.polyline (encoded)
+      try {
+        const geo =
+          (body && body.route && body.route.geometry) ||
+          (body && body.geometry) ||
+          null;
+
+        if (geo && geo.type === "LineString" && Array.isArray(geo.coordinates)) {
+          drawGeoJsonLine(geo.coordinates);
+        } else {
+          const pl = (body && body.polyline) || (body && body.route && body.route.polyline) || null;
+          if (pl && typeof pl === "string" && pl.length > 10) drawPolyline(pl);
+        }
+      } catch {}
+
+      pushHistory({
+        when: nowStamp(),
+        mode: payload.mode,
+        stress: payload.stress,
+        trailerLengthFt: payload.trailerLengthFt,
+        origin: payload.origin || "origin: —",
+        destination: payload.destination || "dest: —",
+        httpStatus: 200,
+        ms
+      });
 
     } catch (err) {
-      // Common cases:
-      // - API not running (ERR_CONNECTION_REFUSED)
-      // - CORS blocked
-      // - Mixed content / HTTPS calling http://
+      const ms = Math.round(performance.now() - t0);
+      $("dbgTiming").textContent = `${ms}ms`;
+      $("dbgStatus").textContent = "FETCH_FAILED";
+
       const help = {
         error: "FETCH_FAILED",
         message: String(err && err.message ? err.message : err),
-        url: API_BASE + ROUTE_PATH,
+        url: FULL_URL,
         likelyFixes: [
-          "If you're on GitHub Pages: your API must be reachable publicly and allow CORS for this origin.",
-          "If API is local: run the backend on http://localhost:8080 (or use ?api=http://host:port).",
-          "If page is HTTPS: prefer an HTTPS API URL to avoid mixed-content blocking."
+          "If using GitHub Pages: API must be reachable publicly and allow CORS for this origin.",
+          "If API is local: ensure backend is running on http://localhost:8080 or use ?api=http://host:port",
+          "If page is HTTPS: prefer HTTPS API to avoid mixed-content blocks."
         ]
       };
-      out.textContent = pretty(help);
-      statusEl.innerHTML = `<span class="danger">Fetch failed</span>`;
+      $("dbgRes").textContent = pretty(help);
+      setStatus("Fetch failed", "bad");
+
+      pushHistory({
+        when: nowStamp(),
+        mode: payload.mode,
+        stress: payload.stress,
+        trailerLengthFt: payload.trailerLengthFt,
+        origin: payload.origin || "origin: —",
+        destination: payload.destination || "dest: —",
+        httpStatus: "—",
+        ms
+      });
     } finally {
       planBtn.disabled = false;
-      setTimeout(() => (statusEl.textContent = ""), 2500);
+      setTimeout(() => setStatus("Ready", null), 1200);
     }
-  }
+  });
 
-  planBtn.addEventListener("click", planRoute);
+  // Initialize preset
+  setPreset("TOW");
 </script>
 </body>
 </html>
