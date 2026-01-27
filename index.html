@@ -323,6 +323,50 @@
 
   a { color: #9ec2ff; text-decoration: none; }
   a:hover { text-decoration: underline; }
+
+  /* -------------------------
+     Autocomplete dropdown
+  ------------------------- */
+  .suggest{
+    position:absolute;
+    left: 0;
+    right: 0;
+    top: calc(100% + 6px);
+    z-index: 9999;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    background: rgba(10,14,22,0.98);
+    backdrop-filter: blur(10px);
+    overflow: hidden;
+    box-shadow: 0 18px 50px rgba(0,0,0,0.45);
+  }
+
+  .suggestItem{
+    padding: 10px 12px;
+    cursor: pointer;
+    font-size: 13px;
+    color: var(--text);
+    border-top: 1px solid rgba(255,255,255,0.08);
+  }
+
+  .suggestItem:first-child{ border-top: none; }
+
+  .suggestItem:hover{
+    background: rgba(59,130,246,0.18);
+  }
+
+  .suggestSmall{
+    display:block;
+    font-size: 12px;
+    color: var(--muted);
+    margin-top: 2px;
+  }
+
+  .suggestLoading{
+    padding: 10px 12px;
+    font-size: 13px;
+    color: var(--muted);
+  }
 </style>
 </head>
 
@@ -399,14 +443,16 @@
               </select>
             </label>
 
-            <label style="min-width: 220px;">
-              Origin (lat,lng)
-              <input id="origin" type="text" placeholder="e.g. 40.4406,-79.9959" />
+            <label style="min-width: 330px; position: relative;">
+              Origin (address)
+              <input id="origin" type="text" placeholder="Start typing an address…" autocomplete="off" />
+              <div class="suggest" id="originSuggest" hidden></div>
             </label>
 
-            <label style="min-width: 220px;">
-              Destination (lat,lng)
-              <input id="destination" type="text" placeholder="e.g. 39.9526,-75.1652" />
+            <label style="min-width: 330px; position: relative;">
+              Destination (address)
+              <input id="destination" type="text" placeholder="Start typing an address…" autocomplete="off" />
+              <div class="suggest" id="destSuggest" hidden></div>
             </label>
 
             <button id="planBtn">Plan Route</button>
@@ -474,7 +520,7 @@
                 <input id="towConfidenceTarget" type="number" min="0" max="100" step="1" value="70" />
               </label>
 
-              <label>
+              <label style="min-width: 260px;">
                 Notes
                 <input id="notes" type="text" placeholder="optional" />
               </label>
@@ -487,8 +533,7 @@
           <div id="map"></div>
 
           <div class="sub" style="margin-top:10px;">
-            Tip: inputs accept <span class="pill mono">lat,lng</span>. When your API returns geometry (GeoJSON or polyline),
-            this map will draw it automatically.
+            Address lookup uses OpenStreetMap Nominatim. Pick a suggestion to lock coordinates.
           </div>
         </div>
       </div>
@@ -560,6 +605,15 @@
   $("dbgUrl").textContent = FULL_URL;
 
   // -------------------------
+  // HTML escaping
+  // -------------------------
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, (c) => ({
+      "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"
+    }[c]));
+  }
+
+  // -------------------------
   // Presets
   // -------------------------
   const presets = {
@@ -603,7 +657,7 @@
   // -------------------------
   // Map (Leaflet)
   // -------------------------
-  const map = L.map("map", { zoomControl: true }).setView([39.5, -98.35], 4); // US-ish
+  const map = L.map("map", { zoomControl: true }).setView([39.5, -98.35], 4);
   L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
     maxZoom: 19,
     attribution: "&copy; OpenStreetMap"
@@ -612,20 +666,6 @@
   let originMarker = null;
   let destMarker = null;
   let routeLine = null;
-
-  function clearRoute() {
-    if (routeLine) { map.removeLayer(routeLine); routeLine = null; }
-  }
-
-  function parseLatLng(s) {
-    const m = String(s || "").trim().match(/^(-?\d+(\.\d+)?),\s*(-?\d+(\.\d+)?)$/);
-    if (!m) return null;
-    const lat = Number(m[1]);
-    const lng = Number(m[3]);
-    if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
-    if (lat < -90 || lat > 90 || lng < -180 || lng > 180) return null;
-    return [lat, lng];
-  }
 
   function ensureMarker(existing, latlng, label) {
     if (!latlng) return existing;
@@ -637,6 +677,10 @@
     return existing;
   }
 
+  function clearRoute() {
+    if (routeLine) { map.removeLayer(routeLine); routeLine = null; }
+  }
+
   function fitToMarkers() {
     const pts = [];
     if (originMarker) pts.push(originMarker.getLatLng());
@@ -646,14 +690,13 @@
   }
 
   function drawGeoJsonLine(coordsLngLat) {
-    // coords expected [[lng,lat],...]
     const latlngs = coordsLngLat.map(([lng, lat]) => [lat, lng]);
     if (routeLine) map.removeLayer(routeLine);
     routeLine = L.polyline(latlngs, { weight: 5, opacity: 0.9 }).addTo(map);
     map.fitBounds(routeLine.getBounds(), { padding: [30,30] });
   }
 
-  // Minimal polyline decoder (Google polyline)
+  // Polyline decode (Google polyline)
   function decodePolyline(str) {
     let index = 0, lat = 0, lng = 0, coordinates = [];
     while (index < str.length) {
@@ -680,9 +723,128 @@
   }
 
   // -------------------------
-  // History
+  // Address autocomplete (Nominatim)
   // -------------------------
-  const HISTORY_KEY = "roadrage_demo_history_v1";
+  function debounce(fn, ms) {
+    let t = null;
+    return (...args) => {
+      clearTimeout(t);
+      t = setTimeout(() => fn(...args), ms);
+    };
+  }
+
+  async function nominatimSearch(q) {
+    const url = new URL("https://nominatim.openstreetmap.org/search");
+    url.searchParams.set("q", q);
+    url.searchParams.set("format", "json");
+    url.searchParams.set("addressdetails", "1");
+    url.searchParams.set("limit", "6");
+
+    const res = await fetch(url.toString(), {
+      headers: { "Accept": "application/json" }
+    });
+
+    if (!res.ok) throw new Error(`Nominatim HTTP ${res.status}`);
+    return await res.json();
+  }
+
+  function renderSuggest(container, items, onPick) {
+    container.innerHTML = "";
+    if (!items.length) {
+      container.hidden = true;
+      return;
+    }
+
+    for (const it of items) {
+      const div = document.createElement("div");
+      div.className = "suggestItem";
+      div.innerHTML = `
+        ${escapeHtml(it.display_name)}
+        <span class="suggestSmall">lat ${Number(it.lat).toFixed(5)}, lng ${Number(it.lon).toFixed(5)}</span>
+      `;
+      // mousedown so it fires before blur
+      div.addEventListener("mousedown", (e) => {
+        e.preventDefault();
+        onPick(it);
+      });
+      container.appendChild(div);
+    }
+
+    container.hidden = false;
+  }
+
+  function hideSuggest(container) {
+    container.hidden = true;
+    container.innerHTML = "";
+  }
+
+  const originSuggest = $("originSuggest");
+  const destSuggest = $("destSuggest");
+
+  let originChosen = null; // { lat, lng, label }
+  let destChosen = null;
+
+  function setChosen(which, v) {
+    if (which === "origin") originChosen = v;
+    if (which === "dest") destChosen = v;
+  }
+
+  function updateMarkersFromChosen() {
+    clearRoute();
+    if (originChosen) originMarker = ensureMarker(originMarker, [originChosen.lat, originChosen.lng], "Origin");
+    if (destChosen) destMarker = ensureMarker(destMarker, [destChosen.lat, destChosen.lng], "Destination");
+    fitToMarkers();
+  }
+
+  function setupAutocomplete(inputEl, suggestEl, which) {
+    const doSearch = debounce(async () => {
+      const q = (inputEl.value || "").trim();
+      if (q.length < 3) { hideSuggest(suggestEl); return; }
+
+      suggestEl.hidden = false;
+      suggestEl.innerHTML = `<div class="suggestLoading">Searching…</div>`;
+
+      try {
+        const results = await nominatimSearch(q);
+        renderSuggest(suggestEl, results, (pick) => {
+          const lat = Number(pick.lat);
+          const lng = Number(pick.lon);
+          const label = pick.display_name;
+
+          inputEl.value = label;
+          setChosen(which, { lat, lng, label });
+
+          hideSuggest(suggestEl);
+          updateMarkersFromChosen();
+        });
+      } catch (e) {
+        suggestEl.innerHTML = `<div class="suggestLoading">Lookup failed</div>`;
+        setTimeout(() => hideSuggest(suggestEl), 900);
+      }
+    }, 250);
+
+    inputEl.addEventListener("input", () => {
+      setChosen(which, null);
+      doSearch();
+    });
+
+    inputEl.addEventListener("blur", () => {
+      setTimeout(() => hideSuggest(suggestEl), 120);
+    });
+
+    inputEl.addEventListener("focus", () => {
+      const q = (inputEl.value || "").trim();
+      if (q.length >= 3) doSearch();
+    });
+  }
+
+  setupAutocomplete($("origin"), originSuggest, "origin");
+  setupAutocomplete($("destination"), destSuggest, "dest");
+
+  // -------------------------
+  // History (localStorage)
+  // -------------------------
+  const HISTORY_KEY = "roadrage_demo_history_v2";
 
   function loadHistory() {
     try { return JSON.parse(localStorage.getItem(HISTORY_KEY) || "[]"); }
@@ -691,6 +853,11 @@
 
   function saveHistory(items) {
     localStorage.setItem(HISTORY_KEY, JSON.stringify(items.slice(0, 10)));
+  }
+
+  function nowStamp() {
+    const d = new Date();
+    return d.toLocaleString();
   }
 
   function renderHistory() {
@@ -734,17 +901,6 @@
     renderHistory();
   }
 
-  function nowStamp() {
-    const d = new Date();
-    return d.toLocaleString();
-  }
-
-  function escapeHtml(s) {
-    return String(s).replace(/[&<>"']/g, (c) => ({
-      "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"
-    }[c]));
-  }
-
   renderHistory();
 
   // -------------------------
@@ -770,10 +926,22 @@
       notes: ($("notes").value || "").trim()
     };
 
-    const o = ($("origin").value || "").trim();
-    const d = ($("destination").value || "").trim();
-    if (o) payload.origin = o;
-    if (d) payload.destination = d;
+    // Include chosen coordinates (best), plus text (for logging / compatibility)
+    if (originChosen) {
+      payload.origin = { lat: originChosen.lat, lng: originChosen.lng, label: originChosen.label };
+      payload.originText = originChosen.label;
+    } else {
+      const t = ($("origin").value || "").trim();
+      if (t) payload.originText = t;
+    }
+
+    if (destChosen) {
+      payload.destination = { lat: destChosen.lat, lng: destChosen.lng, label: destChosen.label };
+      payload.destinationText = destChosen.label;
+    } else {
+      const t = ($("destination").value || "").trim();
+      if (t) payload.destinationText = t;
+    }
 
     return payload;
   }
@@ -806,15 +974,12 @@
   });
 
   $("openMapsBtn").addEventListener("click", () => {
-    const o = parseLatLng(($("origin").value || "").trim());
-    const d = parseLatLng(($("destination").value || "").trim());
-    if (!o || !d) {
-      statusEl.innerHTML = '<span class="bad">Use lat,lng for Maps</span>';
+    if (!originChosen || !destChosen) {
+      statusEl.innerHTML = '<span class="bad">Pick both addresses</span>';
       setTimeout(() => statusEl.textContent = "Ready", 1200);
       return;
     }
-    // Google Maps directions
-    const url = `https://www.google.com/maps/dir/?api=1&origin=${o[0]},${o[1]}&destination=${d[0]},${d[1]}`;
+    const url = `https://www.google.com/maps/dir/?api=1&origin=${originChosen.lat},${originChosen.lng}&destination=${destChosen.lat},${destChosen.lng}`;
     window.open(url, "_blank", "noopener,noreferrer");
   });
 
@@ -822,42 +987,27 @@
     const a = $("origin").value;
     $("origin").value = $("destination").value;
     $("destination").value = a;
-    updateMarkersFromInputs();
+
+    const ao = originChosen;
+    originChosen = destChosen;
+    destChosen = ao;
+
+    updateMarkersFromChosen();
   });
 
   // -------------------------
-  // Marker updates
+  // Status helpers
   // -------------------------
-  function updateMarkersFromInputs() {
-    const o = parseLatLng(($("origin").value || "").trim());
-    const d = parseLatLng(($("destination").value || "").trim());
-
-    if (o) originMarker = ensureMarker(originMarker, o, "Origin");
-    if (d) destMarker = ensureMarker(destMarker, d, "Destination");
-
-    // clear route if user changes endpoints
-    clearRoute();
-    fitToMarkers();
-  }
-
-  $("origin").addEventListener("change", updateMarkersFromInputs);
-  $("destination").addEventListener("change", updateMarkersFromInputs);
-
-  // Seed map with sample points if empty
-  if (!$("origin").value) $("origin").value = "40.4406,-79.9959";      // Pittsburgh
-  if (!$("destination").value) $("destination").value = "39.9526,-75.1652"; // Philly
-  updateMarkersFromInputs();
-
-  // -------------------------
-  // Plan route
-  // -------------------------
-  const planBtn = $("planBtn");
-
   function setStatus(text, kind) {
     if (kind === "ok") statusEl.innerHTML = `<span class="ok">${text}</span>`;
     else if (kind === "bad") statusEl.innerHTML = `<span class="bad">${text}</span>`;
     else statusEl.textContent = text;
   }
+
+  // -------------------------
+  // Plan route
+  // -------------------------
+  const planBtn = $("planBtn");
 
   planBtn.addEventListener("click", async () => {
     planBtn.disabled = true;
@@ -901,8 +1051,8 @@
           mode: payload.mode,
           stress: payload.stress,
           trailerLengthFt: payload.trailerLengthFt,
-          origin: payload.origin || "origin: —",
-          destination: payload.destination || "dest: —",
+          origin: payload.originText || "origin: —",
+          destination: payload.destinationText || "dest: —",
           httpStatus: res.status,
           ms
         });
@@ -914,11 +1064,6 @@
       setStatus("OK", "ok");
 
       // Try drawing route if API returns geometry in common shapes
-      // Supported:
-      // - body.route.geometry.type === "LineString" with coordinates [[lng,lat],...]
-      // - body.geometry.type === "LineString"
-      // - body.polyline (encoded)
-      // - body.route.polyline (encoded)
       try {
         const geo =
           (body && body.route && body.route.geometry) ||
@@ -938,8 +1083,8 @@
         mode: payload.mode,
         stress: payload.stress,
         trailerLengthFt: payload.trailerLengthFt,
-        origin: payload.origin || "origin: —",
-        destination: payload.destination || "dest: —",
+        origin: payload.originText || "origin: —",
+        destination: payload.destinationText || "dest: —",
         httpStatus: 200,
         ms
       });
@@ -967,8 +1112,8 @@
         mode: payload.mode,
         stress: payload.stress,
         trailerLengthFt: payload.trailerLengthFt,
-        origin: payload.origin || "origin: —",
-        destination: payload.destination || "dest: —",
+        origin: payload.originText || "origin: —",
+        destination: payload.destinationText || "dest: —",
         httpStatus: "—",
         ms
       });
