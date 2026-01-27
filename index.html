@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Roadrage Demo</title>
+  <style>
+    body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;margin:24px;max-width:900px}
+    button{padding:10px 14px;font-size:14px;cursor:pointer}
+    pre{background:#111;color:#eee;padding:12px;border-radius:8px;overflow:auto}
+    .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+    label{display:flex;gap:8px;align-items:center}
+    input{padding:6px 8px}
+  </style>
+</head>
+<body>
+  <h1>Roadrage — Route Planner Demo</h1>
+  <p>This page calls the local API at <code>http://localhost:8080/v1/route/plan</code>.</p>
+
+  <div class="row">
+    <label>Stress (1–100)
+      <input id="stress" type="number" min="1" max="100" value="25" />
+    </label>
+    <label>Trailer length (ft)
+      <input id="tlen" type="number" min="0" step="0.5" value="16" />
+    </label>
+    <label>Mode
+      <select id="mode">
+        <option value="TOW">TOW</option>
+        <option value="LOW_STRESS">LOW_STRESS</option>
+        <option value="FASTEST">FASTEST</option>
+        <option value="FUEL_SAVER">FUEL_SAVER</option>
+      </select>
+    </label>
+    <button id="plan">Plan route</button>
+  </div>
+
+  <h3>Response</h3>
+  <pre id="out">{}</pre>
+
+  <script>
+    const $ = (id) => document.getElementById(id);
+
+    $("plan").onclick = async () => {
+      const stress = Math.max(1, Math.min(100, Number($("stress").value || 25)));
+      const trailerLen = Number($("tlen").value || 0);
+      const towing = trailerLen > 0;
+      const mode = $("mode").value;
+
+      const body = {
+        requestId: "req_" + Date.now(),
+        origin: { lat: 36.0, lng: -84.0 },
+        destination: { lat: 36.2, lng: -84.1 },
+        time: { departureType: "now" },
+        mode: { primary: mode, alsoReturn: ["LOW_STRESS","TOW","FASTEST","FUEL_SAVER"] },
+        userState: { stressTolerance: stress },
+        vehicleProfile: {
+          vehicleType: "TRUCK",
+          trailer: towing ? { enabled: true, type: "UTILITY", lengthFt: trailerLen, weightClass: "LIGHT" }
+                         : { enabled: false }
+        },
+        constraints: { largeTrailerThresholdFt: 16, destinationExceptionRadiusMiles: 1.0, maxRouteCountPerMode: 2 }
+      };
+
+      const res = await fetch("http://localhost:8080/v1/route/plan", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body)
+      });
+
+      const json = await res.json();
+      $("out").textContent = JSON.stringify(json, null, 2);
+    };
+  </script>
+</body>
+</html>
