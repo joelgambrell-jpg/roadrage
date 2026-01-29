@@ -7,7 +7,7 @@
 
 <!-- =========================================================
 FILE: web/index.html
-FULL DROP-IN (PRESERVED FEATURES + MAP-FIRST REDESIGN)
+FULL DROP-IN (PRESERVED FEATURES + MAP-FIRST REDESIGN + MODE BOXES)
 Requires: web/assets/vehicles-hero.png
 ========================================================= -->
 
@@ -112,7 +112,7 @@ Requires: web/assets/vehicles-hero.png
   ========================================================= */
   .grid{
     display:grid;
-    grid-template-columns: 1fr 440px; /* map left, controls right */
+    grid-template-columns: 1fr 440px;
     gap: 16px;
     align-items: start;
   }
@@ -159,7 +159,7 @@ Requires: web/assets/vehicles-hero.png
   }
 
   /* =========================================================
-     SUMMARY STRIP (NEW)
+     SUMMARY STRIP
   ========================================================= */
   .summaryRow{
     display:grid;
@@ -248,7 +248,7 @@ Requires: web/assets/vehicles-hero.png
   }
 
   /* =========================================================
-     PRESETS
+     PRESETS (MODES)
   ========================================================= */
   .presetBar{
     display:flex;
@@ -279,6 +279,40 @@ Requires: web/assets/vehicles-hero.png
 
   .preset b{ font-size: 13px; }
   .preset span{ font-size: 12px; color: var(--muted); }
+
+  /* =========================================================
+     MODE OPTIONS BOX (NEW)
+  ========================================================= */
+  .modeBox{
+    border: 1px solid var(--line);
+    background: rgba(255,255,255,0.06);
+    border-radius: 14px;
+    padding: 12px;
+  }
+  .modeBoxTitle{
+    display:flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 10px;
+    margin-bottom: 10px;
+  }
+  .modeBoxTitle b{ font-size: 13px; }
+  .modeBoxTitle span{ font-size: 12px; color: var(--muted); }
+
+  .modeGrid2{
+    display:grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+  @media (max-width: 520px){
+    .modeGrid2{ grid-template-columns: 1fr; }
+  }
+
+  .hint{
+    font-size: 12px;
+    color: var(--muted);
+    margin-top: 8px;
+  }
 
   /* =========================================================
      ADVANCED TOGGLE
@@ -376,7 +410,7 @@ Requires: web/assets/vehicles-hero.png
   }
 
   /* =========================================================
-     DEBUG + HISTORY (PRESERVED)
+     DEBUG + HISTORY
   ========================================================= */
   pre{
     margin: 0;
@@ -432,7 +466,7 @@ Requires: web/assets/vehicles-hero.png
   }
 
   /* =========================================================
-     RIGHT PANEL TABS (NEW, NO FEATURE REMOVAL)
+     RIGHT PANEL TABS
   ========================================================= */
   .tabs{
     display:flex;
@@ -479,7 +513,7 @@ Requires: web/assets/vehicles-hero.png
 
     <div class="grid">
       <!-- =========================================================
-           LEFT: MAP + SUMMARY (MAP-FIRST)
+           LEFT: MAP + SUMMARY
       ========================================================= -->
       <div class="card">
         <div class="cardHead">
@@ -488,7 +522,6 @@ Requires: web/assets/vehicles-hero.png
         </div>
 
         <div class="cardBody">
-          <!-- SUMMARY STRIP -->
           <div class="summaryRow">
             <div class="summaryCard">
               <div class="k">ETA</div>
@@ -517,8 +550,7 @@ Requires: web/assets/vehicles-hero.png
       </div>
 
       <!-- =========================================================
-           RIGHT: CONTROLS / HISTORY / DEVELOPER (TABbed)
-           (All features preserved, just organized)
+           RIGHT: CONTROLS / HISTORY / DEVELOPER
       ========================================================= -->
       <div class="card">
         <div class="cardHead">
@@ -534,7 +566,11 @@ Requires: web/assets/vehicles-hero.png
 
           <!-- ===================== TAB: CONTROLS ===================== -->
           <div class="tabPanel active" id="tabControls">
-            <!-- Presets -->
+
+            <!-- =========================================================
+                 SECTION: MODES (CLICKABLE)
+                 (Existing preset tiles preserved; now they drive Mode Options box below)
+            ========================================================= -->
             <div class="presetBar" id="presetBar">
               <div class="preset active" data-preset="TOW">
                 <div>
@@ -558,9 +594,129 @@ Requires: web/assets/vehicles-hero.png
               </div>
             </div>
 
+            <!-- =========================================================
+                 SECTION: MODE OPTIONS BOX (NEW)
+                 Shows different content based on selected mode.
+            ========================================================= -->
+            <div style="margin-top: 12px;">
+              <!-- Tow Options -->
+              <div class="modeBox" id="modeBoxTow" hidden>
+                <div class="modeBoxTitle">
+                  <b>Tow options</b>
+                  <span class="mono">Sets trailerLengthFt automatically</span>
+                </div>
+
+                <div class="modeGrid2">
+                  <label>
+                    Tow vehicle
+                    <select id="towVehicleClass">
+                      <option value="SMART_CAR">Smart car / Micro</option>
+                      <option value="MID_SIZE_SEDAN">Mid-size sedan</option>
+                      <option value="SMALL_SUV">Small SUV / Crossover</option>
+                      <option value="LARGE_SUV">Large SUV</option>
+                      <option value="CREW_CAB_LONG_BED" selected>Crew cab long bed truck</option>
+                      <option value="SEMI_TRACTOR">Semi tractor</option>
+                    </select>
+                  </label>
+
+                  <label>
+                    Trailer setup
+                    <select id="towTrailerPreset">
+                      <option value="NONE|0">None (0 ft)</option>
+                      <option value="SMALL_UTILITY|12">Truck + small trailer (12 ft)</option>
+                      <option value="CAR_HAULER|20">Truck + car hauler (20 ft)</option>
+                      <option value="FIFTH_WHEEL|35">Truck + fifth wheel camper (35 ft)</option>
+                      <option value="SEMI_TRAILER|53">Semi + trailer (53 ft)</option>
+                    </select>
+                  </label>
+                </div>
+
+                <div class="hint">
+                  Your manual <span class="pill mono">Trailer length (ft)</span> field stays available; this just fills it for you.
+                </div>
+              </div>
+
+              <!-- Low Stress Options -->
+              <div class="modeBox" id="modeBoxLowStress" hidden>
+                <div class="modeBoxTitle">
+                  <b>Low stress options</b>
+                  <span class="mono">Comfort + simplicity preferences</span>
+                </div>
+
+                <div class="modeGrid2">
+                  <label>
+                    Driving style
+                    <select id="lsDrivingStyle">
+                      <option value="CALM" selected>Calm</option>
+                      <option value="NORMAL">Normal</option>
+                      <option value="ASSERTIVE">Assertive</option>
+                    </select>
+                  </label>
+
+                  <label>
+                    Prefer simpler driving
+                    <select id="lsSimplicity">
+                      <option value="HIGH" selected>High (avoid complexity)</option>
+                      <option value="MEDIUM">Medium</option>
+                      <option value="LOW">Low</option>
+                    </select>
+                  </label>
+                </div>
+
+                <div class="modeGrid2" style="margin-top:10px;">
+                  <label>
+                    Prefer fewer merges
+                    <select id="lsPreferFewerMerges">
+                      <option value="true" selected>true</option>
+                      <option value="false">false</option>
+                    </select>
+                  </label>
+
+                  <label>
+                    Prefer right lane
+                    <select id="lsPreferRightLane">
+                      <option value="true" selected>true</option>
+                      <option value="false">false</option>
+                    </select>
+                  </label>
+
+                  <label>
+                    Avoid left turns
+                    <select id="lsAvoidLeftTurns">
+                      <option value="false" selected>false</option>
+                      <option value="true">true</option>
+                    </select>
+                  </label>
+
+                  <label>
+                    Avoid complex interchanges
+                    <select id="lsAvoidComplexInterchanges">
+                      <option value="true" selected>true</option>
+                      <option value="false">false</option>
+                    </select>
+                  </label>
+                </div>
+
+                <div class="hint">
+                  These are additive preferences. Your existing Advanced toggles still apply.
+                </div>
+              </div>
+
+              <!-- Fuel Saver / Fastest: no special box (self-explanatory) -->
+              <div class="modeBox" id="modeBoxNone" hidden>
+                <div class="modeBoxTitle">
+                  <b>Mode options</b>
+                  <span class="mono">No extra settings for this mode</span>
+                </div>
+                <div class="hint">Use Advanced below if you want avoid-toggles or lane importance adjustments.</div>
+              </div>
+            </div>
+
             <div class="hr"></div>
 
-            <!-- Core inputs -->
+            <!-- =========================================================
+                 SECTION: CORE INPUTS (PRESERVED)
+            ========================================================= -->
             <div class="row">
               <label style="min-width: 140px;">
                 Stress (1–100)
@@ -572,6 +728,7 @@ Requires: web/assets/vehicles-hero.png
                 <input id="trailerLengthFt" type="number" min="0" max="80" step="0.5" value="16" />
               </label>
 
+              <!-- Mode dropdown preserved (kept in sync with tiles) -->
               <label style="min-width: 170px;">
                 Mode
                 <select id="mode">
@@ -610,7 +767,9 @@ Requires: web/assets/vehicles-hero.png
 
             <div class="hr"></div>
 
-            <!-- Advanced -->
+            <!-- =========================================================
+                 SECTION: ADVANCED (PRESERVED)
+            ========================================================= -->
             <div class="advToggle" id="advToggle">
               <div class="left">
                 <div class="t">Advanced</div>
@@ -703,22 +862,19 @@ Requires: web/assets/vehicles-hero.png
   </div>
 
 <script>
-  // -------------------------
-  // Option C API resolution
-  // -------------------------
+  // =========================================================
+  // SECTION: Option C API resolution (PRESERVED)
+  // =========================================================
   function resolveApiBase() {
     const params = new URLSearchParams(location.search);
 
-    // 1) manual override
     const override = params.get("api");
     if (override) return override.replace(/\/+$/, "");
 
-    // 2) local dev
     if (location.hostname === "localhost" || location.hostname === "127.0.0.1") {
       return "http://localhost:8080";
     }
 
-    // 3) production default (set this once deployed)
     return "https://api.yourdomain.com";
   }
 
@@ -726,9 +882,9 @@ Requires: web/assets/vehicles-hero.png
   const ENDPOINT = "/v1/route/plan";
   const FULL_URL = API_BASE + ENDPOINT;
 
-  // -------------------------
-  // DOM helpers
-  // -------------------------
+  // =========================================================
+  // SECTION: DOM helpers (PRESERVED)
+  // =========================================================
   const $ = (id) => document.getElementById(id);
   const statusEl = $("status");
 
@@ -736,9 +892,9 @@ Requires: web/assets/vehicles-hero.png
   $("dbgApi").textContent = API_BASE;
   $("dbgUrl").textContent = FULL_URL;
 
-  // -------------------------
-  // Tabs (NEW, no feature removal)
-  // -------------------------
+  // =========================================================
+  // SECTION: Tabs (PRESERVED)
+  // =========================================================
   function setActiveTab(tabName) {
     const btns = {
       controls: $("tabControlsBtn"),
@@ -759,18 +915,18 @@ Requires: web/assets/vehicles-hero.png
   $("tabHistoryBtn").addEventListener("click", () => setActiveTab("history"));
   $("tabDevBtn").addEventListener("click", () => setActiveTab("dev"));
 
-  // -------------------------
-  // HTML escaping
-  // -------------------------
+  // =========================================================
+  // SECTION: HTML escaping (PRESERVED)
+  // =========================================================
   function escapeHtml(s) {
     return String(s).replace(/[&<>"']/g, (c) => ({
       "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"
     }[c]));
   }
 
-  // -------------------------
-  // Presets
-  // -------------------------
+  // =========================================================
+  // SECTION: Presets (PRESERVED) + Mode tiles drive options box (UPDATED)
+  // =========================================================
   const presets = {
     TOW: { mode: "TOW", stress: 25, trailerLengthFt: 16, laneImportance: 60, towConfidenceTarget: 75 },
     LOW_STRESS: { mode: "LOW_STRESS", stress: 15, trailerLengthFt: 0, laneImportance: 75, towConfidenceTarget: 0 },
@@ -778,7 +934,7 @@ Requires: web/assets/vehicles-hero.png
     FASTEST: { mode: "FASTEST", stress: 50, trailerLengthFt: 0, laneImportance: 25, towConfidenceTarget: 0 }
   };
 
-  function setPreset(name) {
+  function setPreset(name, opts={}) {
     const p = presets[name];
     if (!p) return;
 
@@ -791,6 +947,15 @@ Requires: web/assets/vehicles-hero.png
     [...document.querySelectorAll(".preset")].forEach(el => {
       el.classList.toggle("active", el.dataset.preset === name);
     });
+
+    // Update mode options box visibility (NEW)
+    updateModeOptionsVisibility(p.mode);
+
+    // Update summary stress immediately (additive)
+    $("mStress").textContent = String(Number($("stress").value) || "—");
+
+    // Optional: keep current tow selections when clicking Tow; do not overwrite.
+    // (No-op here by default)
   }
 
   $("presetBar").addEventListener("click", (e) => {
@@ -799,9 +964,70 @@ Requires: web/assets/vehicles-hero.png
     setPreset(box.dataset.preset);
   });
 
-  // -------------------------
-  // Advanced toggle
-  // -------------------------
+  // =========================================================
+  // SECTION: Mode Options Boxes (NEW)
+  // =========================================================
+  function updateModeOptionsVisibility(mode) {
+    const towBox = $("modeBoxTow");
+    const lsBox = $("modeBoxLowStress");
+    const noneBox = $("modeBoxNone");
+
+    towBox.hidden = true;
+    lsBox.hidden = true;
+    noneBox.hidden = true;
+
+    if (mode === "TOW") towBox.hidden = false;
+    else if (mode === "LOW_STRESS") lsBox.hidden = false;
+    else noneBox.hidden = false;
+  }
+
+  // Keep dropdown mode selector in sync with tiles (PRESERVED + UPDATED)
+  $("mode").addEventListener("change", () => {
+    const m = $("mode").value;
+
+    // Set active tile highlight to match mode
+    [...document.querySelectorAll(".preset")].forEach(el => {
+      el.classList.toggle("active", el.dataset.preset === m);
+    });
+
+    updateModeOptionsVisibility(m);
+
+    // If user manually changes mode, do NOT force-reset all preset defaults.
+    // Only update summary stress display.
+    $("mStress").textContent = String(Number($("stress").value) || "—");
+  });
+
+  // Tow trailer preset sets trailerLengthFt automatically (NEW)
+  function applyTowTrailerPreset() {
+    const raw = $("towTrailerPreset").value; // e.g. "CAR_HAULER|20"
+    const parts = String(raw).split("|");
+    const ft = Number(parts[1] || 0);
+    if (Number.isFinite(ft)) {
+      $("trailerLengthFt").value = ft;
+    }
+  }
+  $("towTrailerPreset").addEventListener("change", applyTowTrailerPreset);
+
+  // Optional: Low Stress driving style can gently adjust laneImportance (additive, not destructive)
+  function applyLowStressStyleHints() {
+    const style = $("lsDrivingStyle").value;
+    // Do not override if user has explicitly chosen something; but we can provide light defaults.
+    // Here: only adjust if laneImportance is still at a preset-like value range.
+    const li = Number($("laneImportance").value);
+    if (!Number.isFinite(li)) return;
+
+    if (style === "CALM" && li < 60) $("laneImportance").value = 75;
+    if (style === "NORMAL" && (li < 40 || li > 80)) $("laneImportance").value = 60;
+    if (style === "ASSERTIVE" && li > 50) $("laneImportance").value = 40;
+  }
+  $("lsDrivingStyle").addEventListener("change", applyLowStressStyleHints);
+
+  // Initialize mode box visibility (NEW)
+  updateModeOptionsVisibility($("mode").value);
+
+  // =========================================================
+  // SECTION: Advanced toggle (PRESERVED)
+  // =========================================================
   let advOpen = false;
   $("advToggle").addEventListener("click", () => {
     advOpen = !advOpen;
@@ -809,9 +1035,9 @@ Requires: web/assets/vehicles-hero.png
     $("advState").textContent = advOpen ? "open" : "closed";
   });
 
-  // -------------------------
-  // Map (Leaflet)
-  // -------------------------
+  // =========================================================
+  // SECTION: Map (PRESERVED)
+  // =========================================================
   const map = L.map("map", { zoomControl: true }).setView([39.5, -98.35], 4);
   L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
     maxZoom: 19,
@@ -851,7 +1077,7 @@ Requires: web/assets/vehicles-hero.png
     map.fitBounds(routeLine.getBounds(), { padding: [30,30] });
   }
 
-  // Polyline decode (Google polyline)
+  // Polyline decode (PRESERVED)
   function decodePolyline(str) {
     let index = 0, lat = 0, lng = 0, coordinates = [];
     while (index < str.length) {
@@ -867,7 +1093,7 @@ Requires: web/assets/vehicles-hero.png
 
       coordinates.push([lat / 1e5, lng / 1e5]);
     }
-    return coordinates; // [[lat,lng],...]
+    return coordinates;
   }
 
   function drawPolyline(encoded) {
@@ -877,9 +1103,9 @@ Requires: web/assets/vehicles-hero.png
     map.fitBounds(routeLine.getBounds(), { padding: [30,30] });
   }
 
-  // -------------------------
-  // Address autocomplete (Nominatim) + keyboard navigation (preserves click behavior)
-  // -------------------------
+  // =========================================================
+  // SECTION: Address autocomplete (PRESERVED + keyboard)
+  // =========================================================
   function debounce(fn, ms) {
     let t = null;
     return (...args) => {
@@ -895,10 +1121,7 @@ Requires: web/assets/vehicles-hero.png
     url.searchParams.set("addressdetails", "1");
     url.searchParams.set("limit", "8");
 
-    const res = await fetch(url.toString(), {
-      headers: { "Accept": "application/json" }
-    });
-
+    const res = await fetch(url.toString(), { headers: { "Accept": "application/json" } });
     if (!res.ok) throw new Error(`Nominatim HTTP ${res.status}`);
     return await res.json();
   }
@@ -926,7 +1149,6 @@ Requires: web/assets/vehicles-hero.png
         ${escapeHtml(it.display_name)}
         <span class="suggestSmall">lat ${Number(it.lat).toFixed(5)}, lng ${Number(it.lon).toFixed(5)}</span>
       `;
-      // mousedown so it fires before blur
       div.addEventListener("mousedown", (e) => {
         e.preventDefault();
         onPick(it);
@@ -943,7 +1165,6 @@ Requires: web/assets/vehicles-hero.png
     if (index >= 0 && index < items.length) {
       items[index].classList.add("active");
       container.dataset.activeIndex = String(index);
-      // ensure visible
       const el = items[index];
       const top = el.offsetTop;
       const bottom = top + el.offsetHeight;
@@ -1019,7 +1240,6 @@ Requires: web/assets/vehicles-hero.png
       if (q.length >= 3) doSearch();
     });
 
-    // Keyboard navigation (NEW)
     inputEl.addEventListener("keydown", (e) => {
       if (suggestEl.hidden) return;
 
@@ -1069,9 +1289,9 @@ Requires: web/assets/vehicles-hero.png
   setupAutocomplete($("origin"), originSuggest, "origin");
   setupAutocomplete($("destination"), destSuggest, "dest");
 
-  // -------------------------
-  // History (localStorage)
-  // -------------------------
+  // =========================================================
+  // SECTION: History (PRESERVED)
+  // =========================================================
   const HISTORY_KEY = "roadrage_demo_history_v2";
 
   function loadHistory() {
@@ -1131,9 +1351,9 @@ Requires: web/assets/vehicles-hero.png
 
   renderHistory();
 
-  // -------------------------
-  // Build request payload
-  // -------------------------
+  // =========================================================
+  // SECTION: Build request payload (PRESERVED + adds mode options)
+  // =========================================================
   function buildPayload() {
     const payload = {
       stress: Number($("stress").value),
@@ -1154,7 +1374,7 @@ Requires: web/assets/vehicles-hero.png
       notes: ($("notes").value || "").trim()
     };
 
-    // Include chosen coordinates (best), plus text (compat)
+    // Chosen coords + text (PRESERVED)
     if (originChosen) {
       payload.origin = { lat: originChosen.lat, lng: originChosen.lng, label: originChosen.label };
       payload.originText = originChosen.label;
@@ -1171,14 +1391,41 @@ Requires: web/assets/vehicles-hero.png
       if (t) payload.destinationText = t;
     }
 
+    // NEW: Tow mode options
+    if (payload.mode === "TOW") {
+      const vehicleClass = $("towVehicleClass").value;
+      const trailerRaw = $("towTrailerPreset").value; // "TYPE|FT"
+      const parts = String(trailerRaw).split("|");
+      const trailerType = parts[0] || "NONE";
+      const trailerPresetFt = Number(parts[1] || 0);
+
+      payload.vehicleClass = vehicleClass;            // backend can ignore for now
+      payload.towProfile = trailerType;               // backend can ignore for now
+      payload.tow = payload.tow || {};
+      payload.tow.trailerType = trailerType;          // additive
+      payload.tow.trailerPresetFt = trailerPresetFt;  // additive
+    }
+
+    // NEW: Low Stress mode options
+    if (payload.mode === "LOW_STRESS") {
+      payload.lowStress = {
+        drivingStyle: $("lsDrivingStyle").value,
+        simplicity: $("lsSimplicity").value,
+        preferFewerMerges: $("lsPreferFewerMerges").value === "true",
+        preferRightLane: $("lsPreferRightLane").value === "true",
+        avoidLeftTurns: $("lsAvoidLeftTurns").value === "true",
+        avoidComplexInterchanges: $("lsAvoidComplexInterchanges").value === "true"
+      };
+    }
+
     return payload;
   }
 
   function pretty(x) { return JSON.stringify(x, null, 2); }
 
-  // -------------------------
-  // Copy helpers
-  // -------------------------
+  // =========================================================
+  // SECTION: Copy helpers (PRESERVED)
+  // =========================================================
   async function copyText(text) {
     await navigator.clipboard.writeText(text);
     setStatus("Copied", "ok");
@@ -1223,9 +1470,9 @@ Requires: web/assets/vehicles-hero.png
     updateMarkersFromChosen();
   });
 
-  // -------------------------
-  // Status + summary setters
-  // -------------------------
+  // =========================================================
+  // SECTION: Status + summary setters (PRESERVED)
+  // =========================================================
   function setStatus(text, kind) {
     if (kind === "ok") statusEl.innerHTML = `<span class="ok">${escapeHtml(text)}</span>`;
     else if (kind === "bad") statusEl.innerHTML = `<span class="bad">${escapeHtml(text)}</span>`;
@@ -1234,8 +1481,6 @@ Requires: web/assets/vehicles-hero.png
   }
 
   function setSummaryFromResponse(body, payload) {
-    // These are intentionally tolerant of different shapes.
-    // If your API adds fields later, these will start filling automatically.
     const eta =
       body?.etaMinutes ??
       body?.route?.etaMinutes ??
@@ -1269,9 +1514,9 @@ Requires: web/assets/vehicles-hero.png
     $("mTow").textContent = (towRisk == null) ? "—" : String(towRisk);
   }
 
-  // -------------------------
-  // Plan route (preserved)
-  // -------------------------
+  // =========================================================
+  // SECTION: Plan route (PRESERVED)
+  // =========================================================
   const planBtn = $("planBtn");
 
   planBtn.addEventListener("click", async () => {
@@ -1311,7 +1556,6 @@ Requires: web/assets/vehicles-hero.png
         $("dbgRes").textContent = pretty(errObj);
         setStatus(`HTTP ${res.status}`, "bad");
 
-        // Preserve: do not change summary on error
         pushHistory({
           when: nowStamp(),
           mode: payload.mode,
@@ -1329,15 +1573,12 @@ Requires: web/assets/vehicles-hero.png
       $("dbgRes").textContent = isJson ? pretty(body) : String(body);
       setStatus("OK", "ok");
 
-      // Summary updates (NEW, additive only)
       if (isJson) {
         try { setSummaryFromResponse(body, payload); } catch {}
       } else {
-        // if not json, keep stress from payload
         $("mStress").textContent = String(payload.stress ?? "—");
       }
 
-      // Route drawing (preserved, tolerant)
       try {
         const geo =
           (body && body.route && body.route.geometry) ||
@@ -1352,7 +1593,6 @@ Requires: web/assets/vehicles-hero.png
         }
       } catch {}
 
-      // Markers update from chosen coords (preserved behavior)
       updateMarkersFromChosen();
 
       pushHistory({
@@ -1400,10 +1640,11 @@ Requires: web/assets/vehicles-hero.png
     }
   });
 
-  // Initialize preset (preserved)
+  // =========================================================
+  // SECTION: Initialize (PRESERVED)
+  // =========================================================
   setPreset("TOW");
-
-  // Seed summary stress from default preset/payload (additive)
+  applyTowTrailerPreset();     // ensures trailerLengthFt matches initial tow preset
   $("mStress").textContent = String(Number($("stress").value) || "—");
   $("mTow").textContent = "—";
   $("mEta").textContent = "—";
