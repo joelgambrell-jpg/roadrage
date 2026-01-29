@@ -5,6 +5,12 @@
 <meta name="viewport" content="width=device-width,initial-scale=1" />
 <title>Roadrage — Route Planner</title>
 
+<!-- =========================================================
+FILE: web/index.html
+FULL DROP-IN (PRESERVED FEATURES + MAP-FIRST REDESIGN)
+Requires: web/assets/vehicles-hero.png
+========================================================= -->
+
 <!-- Leaflet (map) -->
 <link
   rel="stylesheet"
@@ -21,17 +27,25 @@
 <style>
   :root{
     color-scheme: dark;
-    --bg0: rgba(10,14,22,0.74);
-    --bg1: rgba(12,18,30,0.58);
-    --line: rgba(255,255,255,0.14);
     --text: #e6edf7;
     --muted: #a8b3c7;
+    --muted2: rgba(168,179,199,0.78);
+    --line: rgba(255,255,255,0.14);
+    --line2: rgba(255,255,255,0.10);
+    --glassA: rgba(18,24,36,0.62);
+    --glassB: rgba(10,14,22,0.52);
+    --panel: rgba(0,0,0,0.35);
+
     --blue: #3b82f6;
     --blue2:#2563eb;
     --ok: #22c55e;
     --bad:#ef4444;
+    --warn:#f59e0b;
   }
 
+  /* =========================================================
+     BACKGROUND
+  ========================================================= */
   body{
     margin:0;
     min-height:100vh;
@@ -39,21 +53,25 @@
     color: var(--text);
 
     background:
-      linear-gradient(rgba(8,10,16,0.72), rgba(8,10,16,0.92)),
+      linear-gradient(rgba(8,10,16,0.78), rgba(8,10,16,0.94)),
       url("./assets/vehicles-hero.png") center top / cover no-repeat fixed;
   }
 
+  /* =========================================================
+     WRAP + HEADER
+  ========================================================= */
   .wrap{
-    max-width: 1100px;
+    max-width: 1350px;
     margin: 0 auto;
-    padding: 34px 16px 54px;
+    padding: 26px 16px 56px;
   }
 
-  .hero{
+  .topbar{
     display:flex;
     justify-content: space-between;
-    gap: 18px;
     align-items: end;
+    gap: 16px;
+    flex-wrap: wrap;
     margin-bottom: 14px;
   }
 
@@ -77,30 +95,41 @@
     border-radius: 999px;
     font-size: 12px;
     color: var(--text);
-    max-width: 520px;
+    max-width: 700px;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
     vertical-align: middle;
   }
 
+  .mono{
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+    font-size: 12px;
+  }
+
+  /* =========================================================
+     GRID (MAP FIRST)
+  ========================================================= */
   .grid{
     display:grid;
-    grid-template-columns: 1.05fr 0.95fr;
+    grid-template-columns: 1fr 440px; /* map left, controls right */
     gap: 16px;
+    align-items: start;
   }
 
-  @media (max-width: 980px){
+  @media (max-width: 1100px){
     .grid{ grid-template-columns: 1fr; }
-    .hero{ flex-direction: column; align-items: start; }
   }
 
+  /* =========================================================
+     CARDS
+  ========================================================= */
   .card{
     border: 1px solid var(--line);
     border-radius: 18px;
-    background: linear-gradient(180deg, var(--bg1), rgba(0,0,0,0.35));
+    background: linear-gradient(180deg, var(--glassA), rgba(0,0,0,0.30));
     backdrop-filter: blur(12px);
-    box-shadow: 0 22px 56px rgba(0,0,0,0.40);
+    box-shadow: 0 22px 56px rgba(0,0,0,0.38);
     overflow: hidden;
   }
 
@@ -123,6 +152,48 @@
     padding: 14px 16px 16px;
   }
 
+  .hr{
+    height: 1px;
+    background: var(--line);
+    margin: 14px 0;
+  }
+
+  /* =========================================================
+     SUMMARY STRIP (NEW)
+  ========================================================= */
+  .summaryRow{
+    display:grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px;
+    margin-bottom: 12px;
+  }
+  @media (max-width: 980px){
+    .summaryRow{ grid-template-columns: repeat(2, 1fr); }
+  }
+  .summaryCard{
+    border: 1px solid var(--line);
+    background: rgba(255,255,255,0.06);
+    border-radius: 14px;
+    padding: 10px 12px;
+    min-height: 54px;
+  }
+  .summaryCard .k{ color: var(--muted); font-size: 12px; }
+  .summaryCard .v{ color: var(--text); font-size: 18px; font-weight: 780; margin-top: 2px; }
+
+  /* =========================================================
+     MAP
+  ========================================================= */
+  #map{
+    height: 560px;
+    border-radius: 14px;
+    border: 1px solid var(--line);
+    overflow: hidden;
+    background: rgba(0,0,0,0.35);
+  }
+
+  /* =========================================================
+     CONTROLS
+  ========================================================= */
   .row{
     display:flex;
     flex-wrap: wrap;
@@ -176,6 +247,9 @@
     border-radius: 10px;
   }
 
+  /* =========================================================
+     PRESETS
+  ========================================================= */
   .presetBar{
     display:flex;
     flex-wrap:wrap;
@@ -194,7 +268,9 @@
     padding: 10px 12px;
     cursor: pointer;
     user-select: none;
+    transition: transform 0.06s ease;
   }
+  .preset:active{ transform: translateY(1px); }
 
   .preset.active{
     border-color: rgba(59,130,246,0.65);
@@ -204,12 +280,9 @@
   .preset b{ font-size: 13px; }
   .preset span{ font-size: 12px; color: var(--muted); }
 
-  .hr{
-    height: 1px;
-    background: var(--line);
-    margin: 14px 0;
-  }
-
+  /* =========================================================
+     ADVANCED TOGGLE
+  ========================================================= */
   .advToggle{
     display:flex;
     align-items:center;
@@ -245,22 +318,66 @@
     display:none;
     margin-top: 12px;
   }
-
   .adv.open{ display:block; }
 
-  #map{
-    height: 340px;
-    border-radius: 14px;
-    border: 1px solid var(--line);
-    overflow: hidden;
-    background: rgba(0,0,0,0.35);
-  }
-
-  .mono{
-    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  /* =========================================================
+     STATUS
+  ========================================================= */
+  .status{
     font-size: 12px;
+    color: var(--muted);
+  }
+  .status .ok{ color: var(--ok); font-weight: 750; }
+  .status .bad{ color: var(--bad); font-weight: 750; }
+  .status .warn{ color: var(--warn); font-weight: 750; }
+
+  /* =========================================================
+     AUTOCOMPLETE DROPDOWN
+  ========================================================= */
+  .suggest{
+    position:absolute;
+    left: 0;
+    right: 0;
+    top: calc(100% + 6px);
+    z-index: 9999;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    background: rgba(10,14,22,0.98);
+    backdrop-filter: blur(10px);
+    overflow: hidden;
+    box-shadow: 0 18px 50px rgba(0,0,0,0.45);
   }
 
+  .suggestItem{
+    padding: 10px 12px;
+    cursor: pointer;
+    font-size: 13px;
+    color: var(--text);
+    border-top: 1px solid rgba(255,255,255,0.08);
+  }
+  .suggestItem:first-child{ border-top: none; }
+
+  .suggestItem:hover,
+  .suggestItem.active{
+    background: rgba(59,130,246,0.18);
+  }
+
+  .suggestSmall{
+    display:block;
+    font-size: 12px;
+    color: var(--muted);
+    margin-top: 2px;
+  }
+
+  .suggestLoading{
+    padding: 10px 12px;
+    font-size: 13px;
+    color: var(--muted);
+  }
+
+  /* =========================================================
+     DEBUG + HISTORY (PRESERVED)
+  ========================================================= */
   pre{
     margin: 0;
     padding: 12px;
@@ -281,13 +398,6 @@
     color: var(--muted);
   }
   .kv b{ color: var(--text); font-weight: 650; }
-
-  .status{
-    font-size: 12px;
-    color: var(--muted);
-  }
-  .status .ok{ color: var(--ok); font-weight: 700; }
-  .status .bad{ color: var(--bad); font-weight: 700; }
 
   .history{
     display:flex;
@@ -321,58 +431,38 @@
     font-size: 12px;
   }
 
+  /* =========================================================
+     RIGHT PANEL TABS (NEW, NO FEATURE REMOVAL)
+  ========================================================= */
+  .tabs{
+    display:flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  .tabBtn{
+    padding: 8px 10px;
+    font-size: 12px;
+    border-radius: 10px;
+  }
+
+  .tabBtn.active{
+    box-shadow: 0 0 0 2px rgba(59,130,246,0.22) inset;
+    border: 1px solid rgba(59,130,246,0.55);
+  }
+
+  .tabPanel{ display:none; }
+  .tabPanel.active{ display:block; }
+
   a { color: #9ec2ff; text-decoration: none; }
   a:hover { text-decoration: underline; }
-
-  /* -------------------------
-     Autocomplete dropdown
-  ------------------------- */
-  .suggest{
-    position:absolute;
-    left: 0;
-    right: 0;
-    top: calc(100% + 6px);
-    z-index: 9999;
-    border: 1px solid var(--line);
-    border-radius: 12px;
-    background: rgba(10,14,22,0.98);
-    backdrop-filter: blur(10px);
-    overflow: hidden;
-    box-shadow: 0 18px 50px rgba(0,0,0,0.45);
-  }
-
-  .suggestItem{
-    padding: 10px 12px;
-    cursor: pointer;
-    font-size: 13px;
-    color: var(--text);
-    border-top: 1px solid rgba(255,255,255,0.08);
-  }
-
-  .suggestItem:first-child{ border-top: none; }
-
-  .suggestItem:hover{
-    background: rgba(59,130,246,0.18);
-  }
-
-  .suggestSmall{
-    display:block;
-    font-size: 12px;
-    color: var(--muted);
-    margin-top: 2px;
-  }
-
-  .suggestLoading{
-    padding: 10px 12px;
-    font-size: 13px;
-    color: var(--muted);
-  }
 </style>
 </head>
 
 <body>
   <div class="wrap">
-    <div class="hero">
+
+    <div class="topbar">
       <div>
         <h1>Roadrage — Route Planner</h1>
         <div class="sub">
@@ -380,6 +470,7 @@
           <span class="mono">/v1/route/plan</span>
         </div>
       </div>
+
       <div class="sub">
         Override:
         <span class="pill mono">?api=https://your-api.example.com</span>
@@ -387,149 +478,36 @@
     </div>
 
     <div class="grid">
-      <!-- LEFT: Planner -->
+      <!-- =========================================================
+           LEFT: MAP + SUMMARY (MAP-FIRST)
+      ========================================================= -->
       <div class="card">
         <div class="cardHead">
-          <div class="cardTitle">Planner</div>
+          <div class="cardTitle">Route</div>
           <div class="status mono" id="status">Ready</div>
         </div>
 
         <div class="cardBody">
-          <!-- Presets -->
-          <div class="presetBar" id="presetBar">
-            <div class="preset active" data-preset="TOW">
-              <div>
-                <b>Tow</b><br><span>Trailer-aware routing</span>
-              </div>
+          <!-- SUMMARY STRIP -->
+          <div class="summaryRow">
+            <div class="summaryCard">
+              <div class="k">ETA</div>
+              <div class="v" id="mEta">—</div>
             </div>
-            <div class="preset" data-preset="LOW_STRESS">
-              <div>
-                <b>Low Stress</b><br><span>Comfort prioritized</span>
-              </div>
+            <div class="summaryCard">
+              <div class="k">Distance</div>
+              <div class="v" id="mDist">—</div>
             </div>
-            <div class="preset" data-preset="FUEL_SAVER">
-              <div>
-                <b>Fuel Saver</b><br><span>Efficiency prioritized</span>
-              </div>
+            <div class="summaryCard">
+              <div class="k">Stress</div>
+              <div class="v" id="mStress">—</div>
             </div>
-            <div class="preset" data-preset="FASTEST">
-              <div>
-                <b>Fastest</b><br><span>Time prioritized</span>
-              </div>
+            <div class="summaryCard">
+              <div class="k">Tow Risk</div>
+              <div class="v" id="mTow">—</div>
             </div>
           </div>
 
-          <div class="hr"></div>
-
-          <!-- Core inputs -->
-          <div class="row">
-            <label>
-              Stress (1–100)
-              <input id="stress" type="number" min="1" max="100" step="1" value="25" />
-            </label>
-
-            <label>
-              Trailer length (ft)
-              <input id="trailerLengthFt" type="number" min="0" max="80" step="0.5" value="16" />
-            </label>
-
-            <label>
-              Mode
-              <select id="mode">
-                <option value="TOW" selected>TOW</option>
-                <option value="LOW_STRESS">LOW_STRESS</option>
-                <option value="FUEL_SAVER">FUEL_SAVER</option>
-                <option value="FASTEST">FASTEST</option>
-              </select>
-            </label>
-
-            <label style="min-width: 330px; position: relative;">
-              Origin (address)
-              <input id="origin" type="text" placeholder="Start typing an address…" autocomplete="off" />
-              <div class="suggest" id="originSuggest" hidden></div>
-            </label>
-
-            <label style="min-width: 330px; position: relative;">
-              Destination (address)
-              <input id="destination" type="text" placeholder="Start typing an address…" autocomplete="off" />
-              <div class="suggest" id="destSuggest" hidden></div>
-            </label>
-
-            <button id="planBtn">Plan Route</button>
-            <button class="btnGhost" id="swapBtn" type="button">Swap</button>
-          </div>
-
-          <div class="row" style="margin-top:10px;">
-            <button class="btnGhost btnTiny" id="copyReqBtn" type="button">Copy request JSON</button>
-            <button class="btnGhost btnTiny" id="copyCurlBtn" type="button">Copy curl</button>
-            <button class="btnGhost btnTiny" id="openMapsBtn" type="button">Open in Maps</button>
-          </div>
-
-          <div class="hr"></div>
-
-          <!-- Advanced -->
-          <div class="advToggle" id="advToggle">
-            <div class="left">
-              <div class="t">Advanced</div>
-              <div class="d">Avoid options, lane strategy, tow confidence, notes</div>
-            </div>
-            <div class="pill mono" id="advState">closed</div>
-          </div>
-
-          <div class="adv" id="advPanel">
-            <div class="row" style="margin-top:12px;">
-              <label>
-                Avoid highways
-                <select id="avoidHighways">
-                  <option value="false" selected>false</option>
-                  <option value="true">true</option>
-                </select>
-              </label>
-
-              <label>
-                Avoid tolls
-                <select id="avoidTolls">
-                  <option value="false" selected>false</option>
-                  <option value="true">true</option>
-                </select>
-              </label>
-
-              <label>
-                Avoid ferries
-                <select id="avoidFerries">
-                  <option value="false" selected>false</option>
-                  <option value="true">true</option>
-                </select>
-              </label>
-
-              <label>
-                Avoid unpaved
-                <select id="avoidUnpaved">
-                  <option value="false" selected>false</option>
-                  <option value="true">true</option>
-                </select>
-              </label>
-
-              <label>
-                Lane strategy importance (0–100)
-                <input id="laneImportance" type="number" min="0" max="100" step="1" value="50" />
-              </label>
-
-              <label>
-                Tow confidence target (0–100)
-                <input id="towConfidenceTarget" type="number" min="0" max="100" step="1" value="70" />
-              </label>
-
-              <label style="min-width: 260px;">
-                Notes
-                <input id="notes" type="text" placeholder="optional" />
-              </label>
-            </div>
-          </div>
-
-          <div class="hr"></div>
-
-          <!-- Map -->
           <div id="map"></div>
 
           <div class="sub" style="margin-top:10px;">
@@ -538,33 +516,187 @@
         </div>
       </div>
 
-      <!-- RIGHT: Debug + History -->
+      <!-- =========================================================
+           RIGHT: CONTROLS / HISTORY / DEVELOPER (TABbed)
+           (All features preserved, just organized)
+      ========================================================= -->
       <div class="card">
         <div class="cardHead">
-          <div class="cardTitle">Debug & History</div>
-          <div class="row" style="gap:8px; margin:0;">
-            <button class="btnGhost btnTiny" id="clearHistoryBtn" type="button">Clear history</button>
+          <div class="cardTitle">Controls</div>
+          <div class="tabs">
+            <button class="btnGhost tabBtn active" id="tabControlsBtn" type="button">Controls</button>
+            <button class="btnGhost tabBtn" id="tabHistoryBtn" type="button">History</button>
+            <button class="btnGhost tabBtn" id="tabDevBtn" type="button">Developer</button>
           </div>
         </div>
 
         <div class="cardBody">
-          <div class="kv mono" style="margin-bottom:12px;">
-            <div>Resolved API:</div><b id="dbgApi">…</b>
-            <div>Endpoint:</div><b id="dbgUrl">…</b>
-            <div>Last status:</div><b id="dbgStatus">—</b>
-            <div>Timing:</div><b id="dbgTiming">—</b>
+
+          <!-- ===================== TAB: CONTROLS ===================== -->
+          <div class="tabPanel active" id="tabControls">
+            <!-- Presets -->
+            <div class="presetBar" id="presetBar">
+              <div class="preset active" data-preset="TOW">
+                <div>
+                  <b>Tow</b><br><span>Trailer-aware routing</span>
+                </div>
+              </div>
+              <div class="preset" data-preset="LOW_STRESS">
+                <div>
+                  <b>Low Stress</b><br><span>Comfort prioritized</span>
+                </div>
+              </div>
+              <div class="preset" data-preset="FUEL_SAVER">
+                <div>
+                  <b>Fuel Saver</b><br><span>Efficiency prioritized</span>
+                </div>
+              </div>
+              <div class="preset" data-preset="FASTEST">
+                <div>
+                  <b>Fastest</b><br><span>Time prioritized</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="hr"></div>
+
+            <!-- Core inputs -->
+            <div class="row">
+              <label style="min-width: 140px;">
+                Stress (1–100)
+                <input id="stress" type="number" min="1" max="100" step="1" value="25" />
+              </label>
+
+              <label style="min-width: 160px;">
+                Trailer length (ft)
+                <input id="trailerLengthFt" type="number" min="0" max="80" step="0.5" value="16" />
+              </label>
+
+              <label style="min-width: 170px;">
+                Mode
+                <select id="mode">
+                  <option value="TOW" selected>TOW</option>
+                  <option value="LOW_STRESS">LOW_STRESS</option>
+                  <option value="FUEL_SAVER">FUEL_SAVER</option>
+                  <option value="FASTEST">FASTEST</option>
+                </select>
+              </label>
+            </div>
+
+            <div class="row" style="margin-top:12px;">
+              <label style="min-width: 100%; position: relative;">
+                Origin (address)
+                <input id="origin" type="text" placeholder="Start typing an address…" autocomplete="off" />
+                <div class="suggest" id="originSuggest" hidden></div>
+              </label>
+
+              <label style="min-width: 100%; position: relative;">
+                Destination (address)
+                <input id="destination" type="text" placeholder="Start typing an address…" autocomplete="off" />
+                <div class="suggest" id="destSuggest" hidden></div>
+              </label>
+            </div>
+
+            <div class="row" style="margin-top:10px;">
+              <button id="planBtn">Plan Route</button>
+              <button class="btnGhost" id="swapBtn" type="button">Swap</button>
+            </div>
+
+            <div class="row" style="margin-top:10px;">
+              <button class="btnGhost btnTiny" id="copyReqBtn" type="button">Copy request JSON</button>
+              <button class="btnGhost btnTiny" id="copyCurlBtn" type="button">Copy curl</button>
+              <button class="btnGhost btnTiny" id="openMapsBtn" type="button">Open in Maps</button>
+            </div>
+
+            <div class="hr"></div>
+
+            <!-- Advanced -->
+            <div class="advToggle" id="advToggle">
+              <div class="left">
+                <div class="t">Advanced</div>
+                <div class="d">Avoid options, lane strategy, tow confidence, notes</div>
+              </div>
+              <div class="pill mono" id="advState">closed</div>
+            </div>
+
+            <div class="adv" id="advPanel">
+              <div class="row" style="margin-top:12px;">
+                <label>
+                  Avoid highways
+                  <select id="avoidHighways">
+                    <option value="false" selected>false</option>
+                    <option value="true">true</option>
+                  </select>
+                </label>
+
+                <label>
+                  Avoid tolls
+                  <select id="avoidTolls">
+                    <option value="false" selected>false</option>
+                    <option value="true">true</option>
+                  </select>
+                </label>
+
+                <label>
+                  Avoid ferries
+                  <select id="avoidFerries">
+                    <option value="false" selected>false</option>
+                    <option value="true">true</option>
+                  </select>
+                </label>
+
+                <label>
+                  Avoid unpaved
+                  <select id="avoidUnpaved">
+                    <option value="false" selected>false</option>
+                    <option value="true">true</option>
+                  </select>
+                </label>
+
+                <label>
+                  Lane strategy importance (0–100)
+                  <input id="laneImportance" type="number" min="0" max="100" step="1" value="50" />
+                </label>
+
+                <label>
+                  Tow confidence target (0–100)
+                  <input id="towConfidenceTarget" type="number" min="0" max="100" step="1" value="70" />
+                </label>
+
+                <label style="min-width: 100%;">
+                  Notes
+                  <input id="notes" type="text" placeholder="optional" />
+                </label>
+              </div>
+            </div>
           </div>
 
-          <div class="sub" style="margin: 6px 0 8px;">Request</div>
-          <pre class="mono" id="dbgReq">{}</pre>
+          <!-- ===================== TAB: HISTORY (PRESERVED) ===================== -->
+          <div class="tabPanel" id="tabHistory">
+            <div class="row" style="justify-content: space-between;">
+              <div class="sub" style="margin:0;">Recent plans (localStorage)</div>
+              <button class="btnGhost btnTiny" id="clearHistoryBtn" type="button">Clear history</button>
+            </div>
+            <div class="hr"></div>
+            <div class="history" id="history"></div>
+          </div>
 
-          <div class="sub" style="margin: 12px 0 8px;">Response / Error</div>
-          <pre class="mono" id="dbgRes">{}</pre>
+          <!-- ===================== TAB: DEVELOPER (PRESERVED) ===================== -->
+          <div class="tabPanel" id="tabDev">
+            <div class="kv mono" style="margin-bottom:12px;">
+              <div>Resolved API:</div><b id="dbgApi">…</b>
+              <div>Endpoint:</div><b id="dbgUrl">…</b>
+              <div>Last status:</div><b id="dbgStatus">—</b>
+              <div>Timing:</div><b id="dbgTiming">—</b>
+            </div>
 
-          <div class="hr"></div>
+            <div class="sub" style="margin: 6px 0 8px;">Request</div>
+            <pre class="mono" id="dbgReq">{}</pre>
 
-          <div class="sub" style="margin: 0 0 10px;">Recent plans (localStorage)</div>
-          <div class="history" id="history"></div>
+            <div class="sub" style="margin: 12px 0 8px;">Response / Error</div>
+            <pre class="mono" id="dbgRes">{}</pre>
+          </div>
+
         </div>
       </div>
     </div>
@@ -603,6 +735,29 @@
   $("apiBasePill").textContent = API_BASE;
   $("dbgApi").textContent = API_BASE;
   $("dbgUrl").textContent = FULL_URL;
+
+  // -------------------------
+  // Tabs (NEW, no feature removal)
+  // -------------------------
+  function setActiveTab(tabName) {
+    const btns = {
+      controls: $("tabControlsBtn"),
+      history: $("tabHistoryBtn"),
+      dev: $("tabDevBtn")
+    };
+    const panels = {
+      controls: $("tabControls"),
+      history: $("tabHistory"),
+      dev: $("tabDev")
+    };
+
+    Object.keys(btns).forEach(k => btns[k].classList.toggle("active", k === tabName));
+    Object.keys(panels).forEach(k => panels[k].classList.toggle("active", k === tabName));
+  }
+
+  $("tabControlsBtn").addEventListener("click", () => setActiveTab("controls"));
+  $("tabHistoryBtn").addEventListener("click", () => setActiveTab("history"));
+  $("tabDevBtn").addEventListener("click", () => setActiveTab("dev"));
 
   // -------------------------
   // HTML escaping
@@ -723,7 +878,7 @@
   }
 
   // -------------------------
-  // Address autocomplete (Nominatim)
+  // Address autocomplete (Nominatim) + keyboard navigation (preserves click behavior)
   // -------------------------
   function debounce(fn, ms) {
     let t = null;
@@ -738,7 +893,7 @@
     url.searchParams.set("q", q);
     url.searchParams.set("format", "json");
     url.searchParams.set("addressdetails", "1");
-    url.searchParams.set("limit", "6");
+    url.searchParams.set("limit", "8");
 
     const res = await fetch(url.toString(), {
       headers: { "Accept": "application/json" }
@@ -748,16 +903,25 @@
     return await res.json();
   }
 
+  function hideSuggest(container) {
+    container.hidden = true;
+    container.innerHTML = "";
+    container.dataset.activeIndex = "-1";
+  }
+
   function renderSuggest(container, items, onPick) {
     container.innerHTML = "";
+    container.dataset.activeIndex = "-1";
+
     if (!items.length) {
       container.hidden = true;
       return;
     }
 
-    for (const it of items) {
+    items.forEach((it, idx) => {
       const div = document.createElement("div");
       div.className = "suggestItem";
+      div.dataset.idx = String(idx);
       div.innerHTML = `
         ${escapeHtml(it.display_name)}
         <span class="suggestSmall">lat ${Number(it.lat).toFixed(5)}, lng ${Number(it.lon).toFixed(5)}</span>
@@ -768,14 +932,26 @@
         onPick(it);
       });
       container.appendChild(div);
-    }
+    });
 
     container.hidden = false;
   }
 
-  function hideSuggest(container) {
-    container.hidden = true;
-    container.innerHTML = "";
+  function setActiveSuggestion(container, index) {
+    const items = [...container.querySelectorAll(".suggestItem")];
+    items.forEach(el => el.classList.remove("active"));
+    if (index >= 0 && index < items.length) {
+      items[index].classList.add("active");
+      container.dataset.activeIndex = String(index);
+      // ensure visible
+      const el = items[index];
+      const top = el.offsetTop;
+      const bottom = top + el.offsetHeight;
+      if (top < container.scrollTop) container.scrollTop = top;
+      if (bottom > container.scrollTop + container.clientHeight) container.scrollTop = bottom - container.clientHeight;
+    } else {
+      container.dataset.activeIndex = "-1";
+    }
   }
 
   const originSuggest = $("originSuggest");
@@ -797,16 +973,21 @@
   }
 
   function setupAutocomplete(inputEl, suggestEl, which) {
+    let lastResults = [];
+
     const doSearch = debounce(async () => {
       const q = (inputEl.value || "").trim();
-      if (q.length < 3) { hideSuggest(suggestEl); return; }
+      if (q.length < 3) { hideSuggest(suggestEl); lastResults = []; return; }
 
       suggestEl.hidden = false;
+      suggestEl.style.maxHeight = "280px";
+      suggestEl.style.overflow = "auto";
       suggestEl.innerHTML = `<div class="suggestLoading">Searching…</div>`;
 
       try {
         const results = await nominatimSearch(q);
-        renderSuggest(suggestEl, results, (pick) => {
+        lastResults = results || [];
+        renderSuggest(suggestEl, lastResults, (pick) => {
           const lat = Number(pick.lat);
           const lng = Number(pick.lon);
           const label = pick.display_name;
@@ -820,6 +1001,7 @@
       } catch (e) {
         suggestEl.innerHTML = `<div class="suggestLoading">Lookup failed</div>`;
         setTimeout(() => hideSuggest(suggestEl), 900);
+        lastResults = [];
       }
     }, 250);
 
@@ -829,12 +1011,58 @@
     });
 
     inputEl.addEventListener("blur", () => {
-      setTimeout(() => hideSuggest(suggestEl), 120);
+      setTimeout(() => hideSuggest(suggestEl), 140);
     });
 
     inputEl.addEventListener("focus", () => {
       const q = (inputEl.value || "").trim();
       if (q.length >= 3) doSearch();
+    });
+
+    // Keyboard navigation (NEW)
+    inputEl.addEventListener("keydown", (e) => {
+      if (suggestEl.hidden) return;
+
+      const items = [...suggestEl.querySelectorAll(".suggestItem")];
+      if (!items.length) return;
+
+      const cur = Number(suggestEl.dataset.activeIndex || "-1");
+
+      if (e.key === "ArrowDown") {
+        e.preventDefault();
+        const next = Math.min(items.length - 1, cur + 1);
+        setActiveSuggestion(suggestEl, next);
+        return;
+      }
+
+      if (e.key === "ArrowUp") {
+        e.preventDefault();
+        const prev = Math.max(0, cur - 1);
+        setActiveSuggestion(suggestEl, prev);
+        return;
+      }
+
+      if (e.key === "Enter") {
+        const idx = Number(suggestEl.dataset.activeIndex || "-1");
+        if (idx >= 0 && idx < lastResults.length) {
+          e.preventDefault();
+          const pick = lastResults[idx];
+          const lat = Number(pick.lat);
+          const lng = Number(pick.lon);
+          const label = pick.display_name;
+
+          inputEl.value = label;
+          setChosen(which, { lat, lng, label });
+
+          hideSuggest(suggestEl);
+          updateMarkersFromChosen();
+        }
+        return;
+      }
+
+      if (e.key === "Escape") {
+        hideSuggest(suggestEl);
+      }
     });
   }
 
@@ -926,7 +1154,7 @@
       notes: ($("notes").value || "").trim()
     };
 
-    // Include chosen coordinates (best), plus text (for logging / compatibility)
+    // Include chosen coordinates (best), plus text (compat)
     if (originChosen) {
       payload.origin = { lat: originChosen.lat, lng: originChosen.lng, label: originChosen.label };
       payload.originText = originChosen.label;
@@ -953,13 +1181,13 @@
   // -------------------------
   async function copyText(text) {
     await navigator.clipboard.writeText(text);
-    statusEl.textContent = "Copied";
-    setTimeout(() => statusEl.textContent = "Ready", 900);
+    setStatus("Copied", "ok");
+    setTimeout(() => setStatus("Ready", null), 900);
   }
 
   $("copyReqBtn").addEventListener("click", async () => {
     try { await copyText(pretty(buildPayload())); }
-    catch { statusEl.innerHTML = '<span class="bad">Copy blocked</span>'; }
+    catch { setStatus("Copy blocked", "bad"); }
   });
 
   $("copyCurlBtn").addEventListener("click", async () => {
@@ -970,13 +1198,13 @@
       `  -d '${JSON.stringify(payload)}'`
     ].join(" \\\n");
     try { await copyText(curl); }
-    catch { statusEl.innerHTML = '<span class="bad">Copy blocked</span>'; }
+    catch { setStatus("Copy blocked", "bad"); }
   });
 
   $("openMapsBtn").addEventListener("click", () => {
     if (!originChosen || !destChosen) {
-      statusEl.innerHTML = '<span class="bad">Pick both addresses</span>';
-      setTimeout(() => statusEl.textContent = "Ready", 1200);
+      setStatus("Pick both addresses", "bad");
+      setTimeout(() => setStatus("Ready", null), 1200);
       return;
     }
     const url = `https://www.google.com/maps/dir/?api=1&origin=${originChosen.lat},${originChosen.lng}&destination=${destChosen.lat},${destChosen.lng}`;
@@ -996,16 +1224,53 @@
   });
 
   // -------------------------
-  // Status helpers
+  // Status + summary setters
   // -------------------------
   function setStatus(text, kind) {
-    if (kind === "ok") statusEl.innerHTML = `<span class="ok">${text}</span>`;
-    else if (kind === "bad") statusEl.innerHTML = `<span class="bad">${text}</span>`;
+    if (kind === "ok") statusEl.innerHTML = `<span class="ok">${escapeHtml(text)}</span>`;
+    else if (kind === "bad") statusEl.innerHTML = `<span class="bad">${escapeHtml(text)}</span>`;
+    else if (kind === "warn") statusEl.innerHTML = `<span class="warn">${escapeHtml(text)}</span>`;
     else statusEl.textContent = text;
   }
 
+  function setSummaryFromResponse(body, payload) {
+    // These are intentionally tolerant of different shapes.
+    // If your API adds fields later, these will start filling automatically.
+    const eta =
+      body?.etaMinutes ??
+      body?.route?.etaMinutes ??
+      body?.route?.eta_min ??
+      body?.route?.durationMinutes ??
+      null;
+
+    const dist =
+      body?.distanceMiles ??
+      body?.route?.distanceMiles ??
+      body?.route?.distance_miles ??
+      body?.route?.distance ??
+      null;
+
+    const stressScore =
+      body?.stressScore ??
+      body?.route?.stressScore ??
+      body?.route?.stress ??
+      payload?.stress ??
+      null;
+
+    const towRisk =
+      body?.towRisk ??
+      body?.route?.towRisk ??
+      body?.route?.tow_risk ??
+      (payload?.mode === "TOW" ? "—" : "n/a");
+
+    $("mEta").textContent = (eta == null) ? "—" : `${eta} min`;
+    $("mDist").textContent = (dist == null) ? "—" : (typeof dist === "number" ? `${dist} mi` : String(dist));
+    $("mStress").textContent = (stressScore == null) ? "—" : String(stressScore);
+    $("mTow").textContent = (towRisk == null) ? "—" : String(towRisk);
+  }
+
   // -------------------------
-  // Plan route
+  // Plan route (preserved)
   // -------------------------
   const planBtn = $("planBtn");
 
@@ -1046,6 +1311,7 @@
         $("dbgRes").textContent = pretty(errObj);
         setStatus(`HTTP ${res.status}`, "bad");
 
+        // Preserve: do not change summary on error
         pushHistory({
           when: nowStamp(),
           mode: payload.mode,
@@ -1063,7 +1329,15 @@
       $("dbgRes").textContent = isJson ? pretty(body) : String(body);
       setStatus("OK", "ok");
 
-      // Try drawing route if API returns geometry in common shapes
+      // Summary updates (NEW, additive only)
+      if (isJson) {
+        try { setSummaryFromResponse(body, payload); } catch {}
+      } else {
+        // if not json, keep stress from payload
+        $("mStress").textContent = String(payload.stress ?? "—");
+      }
+
+      // Route drawing (preserved, tolerant)
       try {
         const geo =
           (body && body.route && body.route.geometry) ||
@@ -1077,6 +1351,9 @@
           if (pl && typeof pl === "string" && pl.length > 10) drawPolyline(pl);
         }
       } catch {}
+
+      // Markers update from chosen coords (preserved behavior)
+      updateMarkersFromChosen();
 
       pushHistory({
         when: nowStamp(),
@@ -1123,8 +1400,14 @@
     }
   });
 
-  // Initialize preset
+  // Initialize preset (preserved)
   setPreset("TOW");
+
+  // Seed summary stress from default preset/payload (additive)
+  $("mStress").textContent = String(Number($("stress").value) || "—");
+  $("mTow").textContent = "—";
+  $("mEta").textContent = "—";
+  $("mDist").textContent = "—";
 </script>
 </body>
 </html>
